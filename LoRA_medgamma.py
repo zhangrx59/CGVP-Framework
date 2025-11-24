@@ -18,6 +18,7 @@ from transformers import (
     AutoProcessor,
     TrainingArguments,
     Trainer,
+    set_seed,
 )
 from peft import (
     LoraConfig,
@@ -184,7 +185,7 @@ def build_clinical_note(row) -> str:
 
     # 症状体征
     parts.append(
-        f"Symptoms: itching {pruritus}, pain {pain}, growth {growth}, "
+        f"Symptoms: itching {pruritus}, growth {growth}, pain {pain}, "
         f"shape change {morph_change}, bleeding {bleeding}, elevation {elevated}."
     )
 
@@ -236,6 +237,9 @@ def prepare_splits(
     df = df[df["dx"].isin(ALLOWED_DX)].copy()
 
     print(f"✅ 过滤后只保留 {ALLOWED_DX}，剩余样本数: {len(df)}")
+
+    # 固定随机种子，保证可复现
+    set_seed(seed)
 
     # 按 dx 分层划分 train / (val+test)
     df_train, df_tmp = train_test_split(
@@ -298,7 +302,7 @@ class DermMetadataDataset(Dataset):
         # 标签统一成小写字符串
         target_text = normalize_dx(str(row[COL_TARGET]))
 
-        # 多模态对话 Prompt（英文）
+        # 多模态对话 Prompt（英文，结构尽量稳定）
         messages = [
             {
                 "role": "system",
@@ -306,16 +310,24 @@ class DermMetadataDataset(Dataset):
                     {
                         "type": "text",
                         "text": (
-                            "You are a medical image classifier for skin lesion diagnosis.\n"
-                            "You must classify the lesion into exactly one of the following classes:\n"
-                            "akiec, bcc, bkl, nev, mel.\n"
-                            "Rules:\n"
-                            "1. Only output one class name.\n"
-                            "2. Do not output probability, explanation, or any extra texts.\n"
-                            "3. The answer must be exactly one of: akiec, bcc, bkl, nev, mel.\n"
-                        )
+                            "You are an expert dermatology assistant specialized in dermoscopic images.\n"
+                            "Your task is to classify a skin lesion based on a clinical note and a dermoscopic image.\n\n"
+                            "The dataset uses the following label codes:\n"
+                            " - akiec = actinic keratoses / intraepithelial carcinoma of the skin (Bowen's disease),\n"
+                            " - bcc   = basal cell carcinoma,\n"
+                            " - bkl   = benign keratosis-like lesions (including solar lentigines / seborrheic keratoses / lichen-planus like keratoses),\n"
+                            " - nev   = melanocytic nevi,\n"
+                            " - mel   = melanoma.\n\n"
+                            "When you see these codes, you should understand them as the corresponding disease entities above.\n\n"
+                            "IMPORTANT OUTPUT RULES:\n"
+                            "1. For each case, you MUST output exactly ONE label code from this set: {bcc, akiec, bkl, nev, mel}.\n"
+                            "2. Do NOT output the full disease names.\n"
+                            "3. Do NOT output a list of all labels.\n"
+                            "4. Do NOT add explanations, probabilities, or any other text.\n"
+                            "5. The final answer must consist of a single code token only, e.g. 'bcc'.\n"
+                        ),
                     }
-                ]
+                ],
             },
             {
                 "role": "user",
@@ -324,15 +336,19 @@ class DermMetadataDataset(Dataset):
                         "type": "text",
                         "text": (
                             f"Clinical note:\n{clinical_note}\n\n"
-                            "Based on the clinical note and the provided skin lesion image,\n"
-                            "predict the most likely disease class.\n"
-                            "Answer with only one class name:\n"
-                            "akiec, bcc, bkl, nev, mel."
-                        )
+                            "You are given the above clinical note together with a dermoscopic image of the lesion.\n"
+                            "Based on both the clinical information and the image, decide which label code best describes the lesion.\n\n"
+                            "Valid label codes are: akiec, bcc, bkl, nev, mel (as defined in the system instructions).\n\n"
+                            "You MUST respond with ONLY ONE label code from {akiec, bcc, bkl, nev, mel}.\n"
+                            "Do NOT output a list of labels.\n"
+                            "Do NOT repeat the full disease names.\n"
+                            "Do NOT add any explanation or extra words.\n\n"
+                            "Final answer (ONLY ONE code):"
+                        ),
                     },
-                    {"type": "image", "image": image}
-                ]
-            }
+                    {"type": "image", "image": image},
+                ],
+            },
         ]
 
         return {
@@ -355,13 +371,14 @@ class MedGemmaCollator:
 
         texts = []
         for msgs, tgt in zip(messages_list, targets):
+            # 生成对话文本，不自动加 generation prompt
             chat_text = self.processor.apply_chat_template(
                 msgs,
                 add_generation_prompt=False,
                 tokenize=False,
             )
-            # 把标签代码拼在后面，作为“正确回答”
-            full_text = chat_text + tgt
+            # 训练时：让模型在 "Final answer:" 后面直接生成标签
+            full_text = chat_text + " " + tgt
             texts.append(full_text)
 
         model_inputs = self.processor(
@@ -378,7 +395,7 @@ class MedGemmaCollator:
         return model_inputs
 
 
-# ===================== 5. 加载模型 + LoRA（调整超参：更温和的微调） =====================
+# ===================== 5. 加载模型 + LoRA（更“温和”的设置） =====================
 
 def load_model_and_processor():
     print("🔧 加载 MedGEMMA 基础模型（bf16 + LoRA，全精权重，不用 bitsandbytes）...")
@@ -396,14 +413,22 @@ def load_model_and_processor():
     if hasattr(model, "config"):
         model.config.use_cache = False
 
-    # LoRA 配置：更“弱”一点（dropout 提高）
+    # LoRA 配置：比之前更“温和”，只打在注意力/MLP 线性层上
     lora_config = LoraConfig(
-        r=16,
+        r=8,                     # 从 16 降到 8，减弱扰动强度
         lora_alpha=16,
-        lora_dropout=0.1,   # 从 0.05 提高到 0.1，防止过拟合和灾难性遗忘
+        lora_dropout=0.1,        # dropout 从 0.05 提高到 0.1，缓解过拟合和塌缩
         bias="none",
         task_type="CAUSAL_LM",
-        target_modules="all-linear",
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ],                       # 不再用 "all-linear"，避免把所有线性层都改坏
     )
 
     # 让输入需要 grad，方便 LoRA 训练
@@ -425,6 +450,9 @@ def load_model_and_processor():
 # ===================== 6. 主训练入口 =====================
 
 def main():
+    # 固定随机种子，方便复现
+    set_seed(42)
+
     # 1) 先按类别分层划分 train/val/test
     train_csv, val_csv, test_csv = prepare_splits()
 
@@ -442,22 +470,21 @@ def main():
     model, processor = load_model_and_processor()
     collator = MedGemmaCollator(processor=processor)
 
-    # ===== 这里是关键：调整微调强度（步骤 1） =====
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
-        num_train_epochs=3,          # 从 10 降到 3，避免过拟合 & 大幅破坏基座
+        num_train_epochs=3,              # 从 10 降到 3，防止严重过拟合+遗忘
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
-        learning_rate=5e-5,          # 从 1e-4 降到 5e-5，更温和
+        learning_rate=5e-5,              # 从 1e-4 降到 5e-5，更温和
         logging_steps=10,
         save_steps=200,
         save_total_limit=2,
-        bf16=True,                   # 如报错则改为：bf16=False, fp16=True
+        bf16=True,                       # 如不支持则：bf16=False, fp16=True
         fp16=False,
         report_to="none",
-        remove_unused_columns=False, # 保留 image/messages 等自定义字段
-        # 不使用 evaluation_strategy，兼容你当前 transformers 版本
+        remove_unused_columns=False,     # 保留 image/messages 等自定义字段
+        seed=42,
     )
 
     trainer = Trainer(

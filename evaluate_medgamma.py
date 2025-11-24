@@ -1,4 +1,4 @@
-# evaluate_medgamma_lora.py
+# evaluate_medgamma.py
 # -*- coding: utf-8 -*-
 
 import os
@@ -6,12 +6,12 @@ import re
 import warnings
 
 import torch
-import pandas as pd
 import numpy as np
+import pandas as pd
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from transformers import AutoModelForImageTextToText, AutoProcessor
+from transformers import AutoModelForImageTextToText, AutoProcessor, set_seed
 from peft import PeftModel
 
 from sklearn.metrics import (
@@ -27,28 +27,24 @@ from sklearn.preprocessing import label_binarize
 
 # ========== 路径 & 配置（需与微调脚本一致） ==========
 
-# 基础模型
 BASE_MODEL = "google/medgemma-4b-it"
 
-# 原始 metadata CSV（和微调用的是同一个）
+# 原始 metadata CSV
 METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shape.csv"
 
-# 微调脚本 prepare_splits() 生成的 test CSV
+# 微调脚本中 prepare_splits() 生成的 test CSV
 TEST_CSV = METADATA_CSV.replace(".csv", "_test_5cls.csv")
 
-# LoRA 适配器输出目录（微调脚本里用的 OUTPUT_DIR）
+# LoRA 权重所在目录（要和 LoRA_medgamma.py 里的 OUTPUT_DIR 一致）
 LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\medgemma_lora_derm_from_metadata"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
-IMAGE_EXT = ".png"   # 如果是 .jpg 就改成 ".jpg"
+IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
-# 评估图像保存目录（LoRA 结果单独放一个目录）
-PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_eval"
-os.makedirs(PLOTS_DIR, exist_ok=True)
-
-# 批大小
-BATCH_SIZE = 32
+# 评估图像保存目录
+LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\eval_lora_linear"
+os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）
 COL_IMAGE_ID    = "image_id"
@@ -75,21 +71,23 @@ COL_MORPH_CHANGE= "形态变化"
 COL_BLEEDING    = "出血"
 COL_ELEVATED    = "是否隆起"
 
-# 皮肤病分类标签列（和微调时一致）
-COL_TARGET      = "dx"
+COL_TARGET      = "dx"   # 如果你的列名是“诊断标签”，这里改成 "诊断标签"
 
-# 只评估这 5 类（你现在的实验设定）
+# 只评估这 5 类
 ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]
 
 
-# ========== 一些工具函数 ==========
+# ========== 一些工具函数（和 LoRA_medgamma.py 保持一致） ==========
 
-def yn_str(v, yes="有", no="无", unk="不详"):
+def yn_str(v, yes: str, no: str, unk: str = "unknown") -> str:
+    """
+    把各种 True/False/空/NaN 归一化成 yes/no/unk
+    """
     if isinstance(v, str):
         vs = v.strip().upper()
-        if vs in ["TRUE", "T", "YES", "Y"]:
+        if vs in ["TRUE", "T", "YES", "Y", "1"]:
             return yes
-        if vs in ["FALSE", "F", "NO", "N"]:
+        if vs in ["FALSE", "F", "NO", "N", "0"]:
             return no
         if vs in ["UNK", "UNKNOWN", "NA", "NAN", "NONE", ""]:
             return unk
@@ -101,73 +99,89 @@ def yn_str(v, yes="有", no="无", unk="不详"):
 
 
 def build_clinical_note(row: pd.Series) -> str:
+    """
+    与训练脚本中的英文病历构造逻辑保持一致
+    """
     age = row.get(COL_AGE, "")
-    sex = str(row.get(COL_SEX, "") or "").strip()
+    sex_raw = str(row.get(COL_SEX, "") or "").strip().lower()
     region = str(row.get(COL_REGION, "") or "").strip()
     father_ori = str(row.get(COL_FATHER_ORI, "") or "").strip()
     mother_ori = str(row.get(COL_MOTHER_ORI, "") or "").strip()
 
-    skin_ca = yn_str(row.get(COL_SKIN_CANCER))
-    other_ca = yn_str(row.get(COL_OTHER_CA))
-    smoke = yn_str(row.get(COL_SMOKE), yes="吸烟", no="不吸烟")
-    drink = yn_str(row.get(COL_DRINK), yes="饮酒", no="不饮酒")
-    pesticide = yn_str(row.get(COL_PESTICIDE), yes="有农药接触史", no="无农药接触史")
+    # 性别英文化
+    if sex_raw in ["男", "male", "m"]:
+        sex_en = "male"
+    elif sex_raw in ["女", "female", "f"]:
+        sex_en = "female"
+    else:
+        sex_en = "unknown"
 
-    tap = yn_str(row.get(COL_TAP_WATER), yes="有自来水", no="无自来水")
-    sewer = yn_str(row.get(COL_SEWER), yes="有下水道", no="无下水道")
+    skin_ca = yn_str(row.get(COL_SKIN_CANCER), "yes", "no")
+    other_ca = yn_str(row.get(COL_OTHER_CA), "yes", "no")
+    smoke = yn_str(row.get(COL_SMOKE), "yes", "no")
+    drink = yn_str(row.get(COL_DRINK), "yes", "no")
+    pesticide = yn_str(row.get(COL_PESTICIDE), "yes", "no")
+
+    tap = yn_str(row.get(COL_TAP_WATER), "yes", "no")
+    sewer = yn_str(row.get(COL_SEWER), "yes", "no")
 
     phototype = row.get(COL_PHOTOTYPE, "")
     d1 = row.get(COL_D1, "")
     d2 = row.get(COL_D2, "")
 
-    pruritus = yn_str(row.get(COL_PRURITUS))
-    growth = yn_str(row.get(COL_GROWTH))
-    pain = yn_str(row.get(COL_PAIN))
-    morph_change = yn_str(row.get(COL_MORPH_CHANGE))
-    bleeding = yn_str(row.get(COL_BLEEDING))
-    elevated = yn_str(row.get(COL_ELEVATED))
+    pruritus = yn_str(row.get(COL_PRURITUS), "present", "absent")
+    growth = yn_str(row.get(COL_GROWTH), "present", "absent")
+    pain = yn_str(row.get(COL_PAIN), "present", "absent")
+    morph_change = yn_str(row.get(COL_MORPH_CHANGE), "present", "absent")
+    bleeding = yn_str(row.get(COL_BLEEDING), "present", "absent")
+    elevated = yn_str(row.get(COL_ELEVATED), "present", "absent")
 
-    # 性别汉化
-    if isinstance(sex, str) and sex.upper() in ["MALE", "M"]:
-        sex_cn = "男性"
-    elif isinstance(sex, str) and sex.upper() in ["FEMALE", "F"]:
-        sex_cn = "女性"
-    else:
-        sex_cn = sex or "性别不详"
-
-    region_cn = region or "部位不详"
+    region_en = region if region else "unknown region"
 
     size_str = ""
     if d1 and d2:
-        size_str = f"皮损约 {d1}×{d2} mm"
+        size_str = f"Lesion size is about {d1} by {d2} mm."
     elif d1:
-        size_str = f"皮损最大径约 {d1} mm"
+        size_str = f"Lesion maximum diameter is about {d1} mm."
 
-    photo_str = f"皮肤光型：{phototype} 型" if phototype != "" else ""
+    phototype_str = f"Fitzpatrick skin phototype: {phototype}." if phototype != "" else ""
 
     origin_str = ""
     if father_ori or mother_ori:
-        origin_str = f"父籍贯：{father_ori}，母籍贯：{mother_ori}。"
+        origin_str = (
+            f"The patient's father is from {father_ori or 'unknown'}, "
+            f"and mother is from {mother_ori or 'unknown'}."
+        )
 
     parts = []
-    parts.append(f"{age}岁{sex_cn}，{region_cn}皮肤病变。")
+    parts.append(f"{age}-year-old {sex_en} with a skin lesion on the {region_en}.")
     if size_str:
-        parts.append(size_str + "。")
+        parts.append(size_str)
     if origin_str:
         parts.append(origin_str)
 
-    parts.append(f"既往皮肤癌病史：{skin_ca}；其他恶性肿瘤病史：{other_ca}。")
-    parts.append(f"生活方式：{smoke}，{drink}，{pesticide}。")
-    parts.append(f"居住环境：{tap}，{sewer}。")
-    if photo_str:
-        parts.append(photo_str + "。")
+    parts.append(
+        f"Past history of skin cancer: {skin_ca}; "
+        f"other malignancies: {other_ca}."
+    )
+    parts.append(
+        f"Lifestyle: smoking {smoke}, alcohol {drink}, pesticide exposure {pesticide}."
+    )
+    parts.append(
+        f"Living environment: tap water {tap}, sewer system {sewer}."
+    )
+    if phototype_str:
+        parts.append(phototype_str)
 
     parts.append(
-        f"症状体征：瘙痒{pruritus}，是否长大{growth}，疼痛{pain}，"
-        f"形态变化{morph_change}，出血{bleeding}，隆起{elevated}。"
+        "Current symptoms and signs: "
+        f"pruritus {pruritus}, growth {growth}, pain {pain}, "
+        f"morphologic change {morph_change}, bleeding {bleeding}, "
+        f"elevation {elevated}."
     )
 
-    return "".join(parts)
+    note = " ".join(parts)
+    return note
 
 
 def normalize_dx(label: str) -> str:
@@ -187,7 +201,7 @@ def extract_dx_code(text: str) -> str:
     if not isinstance(text, str):
         return "unknown"
     text_lower = text.lower()
-    m = re.search(r"\b(akiec|bcc|bkl|nev|nv|mel)\b", text_lower)
+    m = re.search(r"\b(mel|bcc|bkl|nev|nv|akiec)\b", text_lower)
     if not m:
         return "unknown"
     code = m.group(1)
@@ -195,32 +209,47 @@ def extract_dx_code(text: str) -> str:
     return code if code in ALLOWED_DX else "unknown"
 
 
-# ========== 加载 LoRA 微调后的模型 ==========
+# ========== 设备与 LoRA 模型加载 ==========
 
-def load_lora_model_and_processor():
+def get_device():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🔧 使用设备: {device}")
+    return device
 
-    print("🔧 加载 MedGEMMA 基础模型 ...")
+
+def load_lora_model_and_processor():
+    device = get_device()
+    print("🔧 加载 MedGEMMA 基座模型 + LoRA 适配器 ...")
+
+    if device.type == "cuda":
+        supports_bf16 = getattr(torch.cuda, "is_bf16_supported", lambda: False)()
+        if supports_bf16:
+            dtype = torch.bfloat16
+            print("🔧 GPU 支持 bfloat16，使用 dtype=torch.bfloat16")
+        else:
+            dtype = torch.float16
+            print("🔧 GPU 不支持 bfloat16，使用 dtype=torch.float16")
+    else:
+        dtype = torch.float32
+        print("🔧 使用 CPU，dtype=torch.float32")
+
     base_model = AutoModelForImageTextToText.from_pretrained(
         BASE_MODEL,
-        dtype=torch.bfloat16 if device.type == "cuda" else torch.float32,
-    ).to(device)
-
-    print(f"🔧 从 {LORA_DIR} 加载 LoRA 适配器 ...")
+        dtype=dtype,
+    )
     model = PeftModel.from_pretrained(base_model, LORA_DIR)
+    model.to(device)
     model.eval()
 
-    # processor 从 LoRA 目录加载，保证 tokenizer 配置一致
     processor = AutoProcessor.from_pretrained(LORA_DIR)
     processor.tokenizer.padding_side = "right"
 
     return model, processor, device
 
 
-# ========== 使用 Test 集评估 LoRA 模型（批量） ==========
+# ========== 逐样本线性推理评估 Test 集（方案 A：按 "Final answer:" 切） ==========
 
-def evaluate_lora_on_test():
+def evaluate_lora_linear():
     if not os.path.exists(TEST_CSV):
         raise FileNotFoundError(
             f"未找到测试集 CSV: {TEST_CSV}\n"
@@ -239,10 +268,9 @@ def evaluate_lora_on_test():
     total, correct = 0, 0
     missing_image = 0
 
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         image_id = str(row[COL_IMAGE_ID])
         label_raw = normalize_dx(str(row[COL_TARGET]))
-
         if label_raw not in ALLOWED_DX:
             continue
 
@@ -261,6 +289,7 @@ def evaluate_lora_on_test():
 
         clinical_note = build_clinical_note(row)
 
+        # prompt：和训练时保持一致，末尾有 "Final answer:"
         messages = [
             {
                 "role": "system",
@@ -270,10 +299,10 @@ def evaluate_lora_on_test():
                         "text": (
                             "You are a dermatology assistant. "
                             "Given the clinical note and the skin lesion image, "
-                            "your task is to classify the skin lesion into one of the following dx codes: "
+                            "your task is to classify the lesion into one of the following classes: "
                             "akiec, bcc, bkl, nev, mel. "
-                            "Always answer with exactly one lowercase code "
-                            "(akiec/bcc/bkl/nev/mel), no explanations."
+                            "Always answer with exactly one lowercase class name "
+                            "from this set, with no explanations."
                         ),
                     }
                 ],
@@ -284,11 +313,12 @@ def evaluate_lora_on_test():
                     {
                         "type": "text",
                         "text": (
-                            "临床病历摘要如下：\n"
-                            f"{clinical_note}\n\n"
-                            "请结合病历和下方的皮肤病变图像，判断该病变最可能属于哪一类，"
-                            "并只输出一个英文小写 dx 代码（akiec/bcc/bkl/nev/mel），"
-                            "不要输出任何其他字符："
+                            f"Clinical note:\n{clinical_note}\n\n"
+                            "Based on the clinical note and the provided skin lesion image, "
+                            "predict the most likely disease class.\n"
+                            "Answer with only one class name:\n"
+                            "akiec, bcc, bkl, nev, mel.\n"
+                            "Final answer:"
                         ),
                     },
                     {"type": "image", "image": image},
@@ -309,16 +339,21 @@ def evaluate_lora_on_test():
         ).to(device)
 
         with torch.no_grad():
-            outputs = model.generate(
+            generated_ids = model.generate(
                 **inputs,
                 max_new_tokens=8,
                 do_sample=False,
             )
 
-        input_len = inputs["input_ids"].shape[1]
-        gen_ids = outputs[:, input_len:]
-        gen_text = processor.batch_decode(gen_ids, skip_special_tokens=True)[0]
-        pred_label = extract_dx_code(gen_text)
+        # 方案 A：对完整 decode 的文本按 "Final answer:" 切分，只在答案部分做正则
+        full_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        low = full_text.lower()
+        if "final answer:" in low:
+            ans_part = low.split("final answer:")[-1]
+        else:
+            ans_part = low
+
+        pred_label = extract_dx_code(ans_part)
 
         total += 1
         if pred_label == label_raw:
@@ -329,18 +364,14 @@ def evaluate_lora_on_test():
 
         print(
             f"🩺 [{total}] image_id={image_id} | pred={pred_label} | true={label_raw} "
-            f"| {'✅' if pred_label == label_raw else '❌'} | raw={gen_text!r}"
+            f"| {'✅' if pred_label == label_raw else '❌'} | ans_part={full_text!r}"
         )
 
-    print("\n====== 📊 LoRA 模型在 Test 集上的评估结果（逐条） ======")
+    print("\n====== 📊 LoRA 模型在线性推理下的 Test 集评估结果 ======")
     print(f"有效样本数: {total}")
     print(f"缺少图片样本数: {missing_image}")
     if total > 0:
         print(f"总体准确率: {correct/total:.2%}")
-
-    # （其余部分不变：混淆矩阵 / ROC / PR 图生成）
-    # ...
-
     else:
         print("没有有效样本")
         return
@@ -368,7 +399,7 @@ def evaluate_lora_on_test():
     ax_cm.set_yticklabels(classes)
     ax_cm.set_xlabel("Predicted label")
     ax_cm.set_ylabel("True label")
-    ax_cm.set_title("Confusion Matrix (LoRA, 5 classes, batch)")
+    ax_cm.set_title("Confusion Matrix (LoRA, 5 classes, linear)")
     plt.setp(ax_cm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
     thresh = cm.max() / 2.0 if cm.max() > 0 else 0.5
@@ -381,12 +412,12 @@ def evaluate_lora_on_test():
             )
 
     fig_cm.tight_layout()
-    cm_path = os.path.join(PLOTS_DIR, "confusion_matrix_lora.png")
+    cm_path = os.path.join(LORA_PLOTS_DIR, "confusion_matrix_LoRA_linear.png")
     fig_cm.savefig(cm_path, dpi=300)
     plt.close(fig_cm)
     print(f"📁 混淆矩阵图已保存到: {cm_path}")
 
-    # ROC & PR（用 one-hot 预测当作 score 近似）
+    # ROC & PR（使用 one-hot 预测当作 score 近似）
     y_true_bin = label_binarize(y_true_arr, classes=classes)
     scores = np.zeros_like(y_true_bin, dtype=float)
     for i, pred in enumerate(y_pred_arr):
@@ -409,10 +440,10 @@ def evaluate_lora_on_test():
     ax_roc.set_ylim([0.0, 1.05])
     ax_roc.set_xlabel("False Positive Rate")
     ax_roc.set_ylabel("True Positive Rate")
-    ax_roc.set_title("ROC Curves (LoRA, 5 classes, batch, pseudo-scores)")
+    ax_roc.set_title("ROC Curves (LoRA, 5 classes, pseudo-scores, linear)")
     ax_roc.legend(loc="lower right", fontsize=8)
     fig_roc.tight_layout()
-    roc_path = os.path.join(PLOTS_DIR, "roc_curve_lora.png")
+    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_linear.png")
     fig_roc.savefig(roc_path, dpi=300)
     plt.close(fig_roc)
     print(f"📁 ROC 曲线图已保存到: {roc_path}")
@@ -433,15 +464,18 @@ def evaluate_lora_on_test():
     ax_pr.set_ylim([0.0, 1.05])
     ax_pr.set_xlabel("Recall")
     ax_pr.set_ylabel("Precision")
-    ax_pr.set_title("Precision-Recall Curves (LoRA, 5 classes, batch, pseudo-scores)")
+    ax_pr.set_title("Precision-Recall Curves (LoRA, 5 classes, pseudo-scores, linear)")
     ax_pr.legend(loc="lower left", fontsize=8)
     fig_pr.tight_layout()
-    pr_path = os.path.join(PLOTS_DIR, "pr_curve_lora.png")
+    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_linear.png")
     fig_pr.savefig(pr_path, dpi=300)
     plt.close(fig_pr)
     print(f"📁 P-R 曲线图已保存到: {pr_path}")
 
 
+# ========== 主入口：评估 LoRA 微调后模型（线性推理 + Final answer 切分） ==========
+
 if __name__ == "__main__":
     warnings.filterwarnings("once")
-    evaluate_lora_on_test()
+    set_seed(42)
+    evaluate_lora_linear()
