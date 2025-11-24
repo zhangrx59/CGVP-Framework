@@ -370,17 +370,21 @@ class MedGemmaCollator:
         targets = [eg["target_text"] for eg in batch]
 
         texts = []
+        prompt_texts = []
         for msgs, tgt in zip(messages_list, targets):
-            # 生成对话文本，不自动加 generation prompt
+            # 1) 生成对话文本（不包含模型答案），不自动加 generation prompt
             chat_text = self.processor.apply_chat_template(
                 msgs,
                 add_generation_prompt=False,
                 tokenize=False,
             )
-            # 训练时：让模型在 "Final answer:" 后面直接生成标签
+            prompt_texts.append(chat_text)
+
+            # 2) 训练时：在文本末尾拼接一个空格和标签，例如 "... Final answer: mel"
             full_text = chat_text + " " + tgt
             texts.append(full_text)
 
+        # 3) 用 processor 正常构造模型输入（文本 + 图像）
         model_inputs = self.processor(
             text=texts,
             images=images,
@@ -389,8 +393,34 @@ class MedGemmaCollator:
             return_tensors="pt",
         )
 
-        labels = model_inputs["input_ids"].clone()
-        labels[labels == self.processor.tokenizer.pad_token_id] = -100
+        input_ids = model_inputs["input_ids"]
+        labels = input_ids.clone()
+
+        # 4) 只让模型在“答案那几 token”上计算 loss：
+        #    即 mask 掉 BOS + prompt 部分，只保留标签 token 的损失
+        tokenizer = self.processor.tokenizer
+
+        for i, prompt_text in enumerate(prompt_texts):
+            # 使用与上面相同的 tokenizer 设置，拿到 prompt 自身的 token 长度
+            prompt_tokens = tokenizer(
+                prompt_text,
+                add_special_tokens=False,
+            )["input_ids"]
+            prompt_len = len(prompt_tokens)
+
+            # 对应到 input_ids 的位置：
+            # input_ids = [BOS] + tokens(chat_text + " " + tgt) + [EOS]
+            # 其中 prompt_tokens 是 tokens(chat_text)，因此答案起始大致在：
+            ans_start = 1 + prompt_len  # 跳过 BOS，再跳过 prompt token
+
+            # 将答案之前的所有 token mask 掉（不参与 loss）
+            labels[i, :ans_start] = -100
+
+        # 5) 再把 padding 的位置也设成 -100（保持原逻辑）
+        pad_id = tokenizer.pad_token_id
+        if pad_id is not None:
+            labels[labels == pad_id] = -100
+
         model_inputs["labels"] = labels
         return model_inputs
 
@@ -476,7 +506,7 @@ def main():
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
-        learning_rate=5e-5,              # 从 1e-4 降到 5e-5，更温和
+        learning_rate=5e-6,              # 从 1e-4 降到 5e-5，更温和
         logging_steps=10,
         save_steps=200,
         save_total_limit=2,

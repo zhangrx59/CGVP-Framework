@@ -364,7 +364,7 @@ def evaluate_lora_linear():
 
         print(
             f"🩺 [{total}] image_id={image_id} | pred={pred_label} | true={label_raw} "
-            f"| {'✅' if pred_label == label_raw else '❌'} | ans_part={full_text!r}"
+            f"| {'✅' if pred_label == label_raw else '❌'} | ans_part={pred_label!r}"
         )
 
     print("\n====== 📊 LoRA 模型在线性推理下的 Test 集评估结果 ======")
