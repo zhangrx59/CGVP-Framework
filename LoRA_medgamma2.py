@@ -1,4 +1,4 @@
-# LoRA_medgamma_finetune.py
+# LoRA_medgamma_focal.py
 # -*- coding: utf-8 -*-
 
 import os
@@ -6,11 +6,11 @@ from dataclasses import dataclass
 from typing import Dict, Any, Tuple
 
 import torch
-from torch.utils.data import Dataset as TorchDataset  # ★ 给 torch 的 Dataset 起别名
+from torch import nn
+from torch.utils.data import Dataset as TorchDataset  # 避免与 HF Dataset 冲突
 from PIL import Image
-import numpy as np
 import pandas as pd
-from datasets import load_dataset, Dataset as HFDataset  # ★ 给 HF 的 Dataset 起别名
+from datasets import load_dataset
 from sklearn.model_selection import train_test_split
 
 from transformers import (
@@ -27,22 +27,16 @@ from peft import (
 
 # ===================== 0. 配置区域 =====================
 
-# 基础模型
 BASE_MODEL = "google/medgemma-4b-it"
 
-# 原始 metadata CSV（包含所有样本）
 METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shape.csv"
-
-# 图片所在根目录 + 后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
-IMAGE_EXT = ".png"   # 如果是 .jpg 就改成 ".jpg"
+IMAGE_EXT = ".png"
 
-# 输出的划分后 CSV
 TRAIN_CSV = METADATA_CSV.replace(".csv", "_train_5cls.csv")
 VAL_CSV   = METADATA_CSV.replace(".csv", "_val_5cls.csv")
-TEST_CSV  = METADATA_CSV.replace(".csv", "_test_5cls.csv")   # 用于后续 baseline / LoRA 评估
+TEST_CSV  = METADATA_CSV.replace(".csv", "_test_5cls.csv")
 
-# 列名（与你的数据一致）
 COL_IMAGE_ID    = "image_id"
 COL_AGE         = "年龄"
 COL_SEX         = "性别"
@@ -67,19 +61,19 @@ COL_MORPH_CHANGE= "形态变化"
 COL_BLEEDING    = "出血"
 COL_ELEVATED    = "是否隆起"
 
-# 皮肤病分类标签列（dx / 诊断标签 等）
 COL_TARGET      = "dx"
-
-# 只保留这 5 类
 ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]
 
-# LoRA adapter 输出目录（调好的大模型就保存在这里）
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\medgemma_lora_derm_from_metadata"
+# LoRA + Focal Loss 微调后的输出目录
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\medgemma_lora_derm_focal"
 
 
-# ===================== 1. 工具函数：病历摘要拼接（英文） =====================
+# ===================== 1. 病历文本 & 标签处理 =====================
 
 def yn_str(v, yes="yes", no="no", unk="unknown"):
+    """
+    把各种 True/False/空/NaN 归一化成 yes/no/unk 或你指定的描述
+    """
     if isinstance(v, str):
         vs = v.strip().upper()
         if vs in ["TRUE", "T", "YES", "Y", "1"]:
@@ -94,14 +88,18 @@ def yn_str(v, yes="yes", no="no", unk="unknown"):
         return unk
     return str(v)
 
-# 从csv文件中构建病人病历单（文字段）
+
 def build_clinical_note(row) -> str:
+    """
+    构造英文病历描述（和 evaluate_medgamma.py 中逻辑保持一致）
+    """
     age = row.get(COL_AGE, "")
     sex_raw = str(row.get(COL_SEX, "") or "").strip().lower()
     region = str(row.get(COL_REGION, "") or "").strip()
     father_ori = str(row.get(COL_FATHER_ORI, "") or "").strip()
     mother_ori = str(row.get(COL_MOTHER_ORI, "") or "").strip()
 
+    # 性别英文化
     if sex_raw in ["男", "male", "m"]:
         sex_en = "male"
     elif sex_raw in ["女", "female", "f"]:
@@ -109,64 +107,68 @@ def build_clinical_note(row) -> str:
     else:
         sex_en = "unknown sex"
 
-    skin_ca = yn_str(row.get(COL_SKIN_CANCER))
-    other_ca = yn_str(row.get(COL_OTHER_CA))
-    smoke = yn_str(row.get(COL_SMOKE), yes="smoker", no="non-smoker", unk="unknown smoking status")
-    drink = yn_str(row.get(COL_DRINK), yes="drinker", no="non-drinker", unk="unknown drinking status")
-    pesticide = yn_str(
-        row.get(COL_PESTICIDE),
-        yes="pesticide exposure",
-        no="no pesticide exposure",
-        unk="unknown pesticide exposure"
-    )
+    skin_ca = yn_str(row.get(COL_SKIN_CANCER), "yes", "no")
+    other_ca = yn_str(row.get(COL_OTHER_CA), "yes", "no")
+    smoke = yn_str(row.get(COL_SMOKE), "yes", "no")
+    drink = yn_str(row.get(COL_DRINK), "yes", "no")
+    pesticide = yn_str(row.get(COL_PESTICIDE), "yes", "no")
 
-    tap = yn_str(row.get(COL_TAP_WATER), yes="has tap water", no="no tap water", unk="unknown tap water supply")
-    sewer = yn_str(row.get(COL_SEWER), yes="has sewerage", no="no sewerage", unk="unknown sewerage")
+    tap = yn_str(row.get(COL_TAP_WATER), "yes", "no")
+    sewer = yn_str(row.get(COL_SEWER), "yes", "no")
 
     phototype = row.get(COL_PHOTOTYPE, "")
     d1 = row.get(COL_D1, "")
     d2 = row.get(COL_D2, "")
 
-    pruritus = yn_str(row.get(COL_PRURITUS), yes="present", no="absent", unk="unknown")
-    growth = yn_str(row.get(COL_GROWTH), yes="present", no="absent", unk="unknown")
-    pain = yn_str(row.get(COL_PAIN), yes="present", no="absent", unk="unknown")
-    morph_change = yn_str(row.get(COL_MORPH_CHANGE), yes="present", no="absent", unk="unknown")
-    bleeding = yn_str(row.get(COL_BLEEDING), yes="present", no="absent", unk="unknown")
-    elevated = yn_str(row.get(COL_ELEVATED), yes="raised", no="flat", unk="unknown")
+    pruritus = yn_str(row.get(COL_PRURITUS), "present", "absent")
+    growth = yn_str(row.get(COL_GROWTH), "present", "absent")
+    pain = yn_str(row.get(COL_PAIN), "present", "absent")
+    morph_change = yn_str(row.get(COL_MORPH_CHANGE), "present", "absent")
+    bleeding = yn_str(row.get(COL_BLEEDING), "present", "absent")
+    elevated = yn_str(row.get(COL_ELEVATED), "raised", "flat")
 
-    region_en = region if region else "unknown location"
+    region_en = region if region else "unknown region"
 
     size_str = ""
     if d1 and d2:
-        size_str = f"Lesion size approximately {d1}×{d2} mm."
+        size_str = f"Lesion size is about {d1} by {d2} mm."
     elif d1:
-        size_str = f"Lesion largest diameter approximately {d1} mm."
+        size_str = f"Lesion maximum diameter is about {d1} mm."
 
-    photo_str = f"Skin phototype: {phototype}." if phototype != "" else ""
+    phototype_str = f"Fitzpatrick skin phototype: {phototype}." if phototype != "" else ""
 
     origin_str = ""
     if father_ori or mother_ori:
         origin_str = (
-            f"Father's birthplace: {father_ori or 'unknown'}, "
-            f"mother's birthplace: {mother_ori or 'unknown'}."
+            f"The patient's father is from {father_ori or 'unknown'}, "
+            f"and mother is from {mother_ori or 'unknown'}."
         )
 
     parts = []
-    parts.append(f"{age}-year-old {sex_en} with a skin lesion located on {region_en}.")
+    parts.append(f"{age}-year-old {sex_en} with a skin lesion on the {region_en}.")
     if size_str:
         parts.append(size_str)
     if origin_str:
         parts.append(origin_str)
 
-    parts.append(f"History of skin cancer: {skin_ca}; other cancer history: {other_ca}.")
-    parts.append(f"Lifestyle: {smoke}, {drink}, {pesticide}.")
-    parts.append(f"Living condition: {tap}, {sewer}.")
-    if photo_str:
-        parts.append(photo_str)
+    parts.append(
+        f"Past history of skin cancer: {skin_ca}; "
+        f"other malignancies: {other_ca}."
+    )
+    parts.append(
+        f"Lifestyle: smoking {smoke}, alcohol {drink}, pesticide exposure {pesticide}."
+    )
+    parts.append(
+        f"Living environment: tap water {tap}, sewer system {sewer}."
+    )
+    if phototype_str:
+        parts.append(phototype_str)
 
     parts.append(
-        f"Symptoms: itching {pruritus}, growth {growth}, pain {pain}, "
-        f"shape change {morph_change}, bleeding {bleeding}, elevation {elevated}."
+        "Current symptoms and signs: "
+        f"pruritus {pruritus}, growth {growth}, pain {pain}, "
+        f"morphologic change {morph_change}, bleeding {bleeding}, "
+        f"elevation {elevated}."
     )
 
     note = " ".join(parts)
@@ -174,6 +176,9 @@ def build_clinical_note(row) -> str:
 
 
 def normalize_dx(label: str) -> str:
+    """
+    把 nv 统一成 nev，其余小写
+    """
     if not isinstance(label, str):
         return ""
     s = label.strip().lower()
@@ -182,7 +187,7 @@ def normalize_dx(label: str) -> str:
     return s
 
 
-# ===================== 2. 按类别均匀划分 train/val/test =====================
+# ===================== 2. train/val/test 划分（不重采样） =====================
 
 def prepare_splits(
     seed: int = 42,
@@ -190,6 +195,9 @@ def prepare_splits(
     val_ratio: float = 0.15,
     test_ratio: float = 0.15,
 ) -> Tuple[str, str, str]:
+    """
+    不做重采样，只做分层划分，结果写入 *_train_5cls.csv / *_val_5cls.csv / *_test_5cls.csv
+    """
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6
 
     if os.path.exists(TRAIN_CSV) and os.path.exists(VAL_CSV) and os.path.exists(TEST_CSV):
@@ -244,54 +252,15 @@ def prepare_splits(
     return TRAIN_CSV, VAL_CSV, TEST_CSV
 
 
-# ===================== 2.5 训练集重采样：按类别平衡 =====================
-
-def make_balanced_train_df(
-        csv_path: str,
-        label_col: str = COL_TARGET,
-        seed: int = 42
-) -> pd.DataFrame:
-    df = pd.read_csv(csv_path, encoding="utf-8")
-    counts = df[label_col].value_counts()
-    print("📊 原始训练集标签分布：")
-    print(counts)
-
-    max_n = counts.max()
-    parts = []
-
-    rng = np.random.RandomState(seed)
-
-    for cls, cnt in counts.items():
-        cls_df = df[df[label_col] == cls]
-        repeats = max_n // cnt
-        remainder = max_n % cnt
-
-        for _ in range(repeats):
-            parts.append(cls_df.copy())
-
-        if remainder > 0:
-            parts.append(cls_df.sample(remainder, replace=True, random_state=seed))
-
-    balanced = pd.concat(parts, ignore_index=True)
-    balanced = balanced.sample(frac=1.0, random_state=seed).reset_index(drop=True)
-
-    print("📊 重采样后训练集标签分布：")
-    print(balanced[label_col].value_counts())
-
-    return balanced
-
-
-# ===================== 3. Dataset：病例 + 图像 → 分类标签 =====================
+# ===================== 3. 自定义 Dataset =====================
 
 class DermMetadataDataset(TorchDataset):
     """
-    基于划分后的 HF Dataset / DataFrame 的 Dataset：
-    - image: 由 图片ID + IMAGE_ROOT_DIR + IMAGE_EXT 拼路径
-    - clinical_note: 由多列字段自动拼接成英文摘要
-    - target_text: 皮肤病分类标签（akiec/bcc/bkl/nev/mel），作为生成目标
+    使用 HF Dataset 或 pandas.DataFrame 作为底层存储，
+    返回 (messages, image[PIL], target_text) 供 collator 使用。
+    target_text 就是 dx code: 'akiec' / 'bcc' / 'bkl' / 'nev' / 'mel'
     """
     def __init__(self, hf_or_df):
-        # 支持传入 HF Dataset 或 pandas.DataFrame
         if isinstance(hf_or_df, pd.DataFrame):
             self.df = hf_or_df.reset_index(drop=True)
         else:
@@ -309,7 +278,12 @@ class DermMetadataDataset(TorchDataset):
         image = Image.open(image_path).convert("RGB")
 
         clinical_note = build_clinical_note(row)
-        target_text = normalize_dx(str(row[COL_TARGET]))
+        label = normalize_dx(str(row[COL_TARGET]))
+        if label not in ALLOWED_DX:
+            # 理论上 prepare_splits 已过滤，这里防御一下
+            label = "nev"
+
+        target_text = label  # 直接用 dx code 作为监督信号
 
         messages = [
             {
@@ -328,7 +302,7 @@ class DermMetadataDataset(TorchDataset):
                             " - mel   = melanoma.\n\n"
                             "When you see these codes, you should understand them as the corresponding disease entities above.\n\n"
                             "IMPORTANT OUTPUT RULES:\n"
-                            "1. For each case, you MUST output exactly ONE label code from this set: {bcc, akiec, bkl, nev, mel}.\n"
+                            "1. For each case, you MUST output exactly ONE label code from this set: {akiec, bcc, bkl, nev, mel}.\n"
                             "2. Do NOT output the full disease names.\n"
                             "3. Do NOT output a list of all labels.\n"
                             "4. Do NOT add explanations, probabilities, or any other text.\n"
@@ -366,7 +340,7 @@ class DermMetadataDataset(TorchDataset):
         }
 
 
-# ===================== 4. collator：AutoProcessor 打包多模态 =====================
+# ===================== 4. collator：构造输入 & 只在答案 token 上算 loss =====================
 
 @dataclass
 class MedGemmaCollator:
@@ -386,7 +360,7 @@ class MedGemmaCollator:
                 tokenize=False,
             )
             prompt_texts.append(chat_text)
-
+            # 把监督信号拼在 prompt 后面，作为 gold completion
             full_text = chat_text + " " + tgt
             texts.append(full_text)
 
@@ -402,17 +376,19 @@ class MedGemmaCollator:
         labels = input_ids.clone()
 
         tokenizer = self.processor.tokenizer
-        # 掩码，将大模型的sys端输出和usr端输出都掩码为-100权重
+
+        # 只让 "答案" 部分参与 loss，prompt 部分 label = -100
         for i, prompt_text in enumerate(prompt_texts):
             prompt_tokens = tokenizer(
                 prompt_text,
                 add_special_tokens=False,
             )["input_ids"]
             prompt_len = len(prompt_tokens)
-
+            # 注意：transformers 通常会加 BOS，所以答案开始位置 = 1 + prompt_len
             ans_start = 1 + prompt_len
             labels[i, :ans_start] = -100
 
+        # pad 部分也不算 loss
         pad_id = tokenizer.pad_token_id
         if pad_id is not None:
             labels[labels == pad_id] = -100
@@ -421,15 +397,28 @@ class MedGemmaCollator:
         return model_inputs
 
 
-# ===================== 5. 加载模型 + LoRA =====================
+# ===================== 5. 模型 + LoRA =====================
 
 def load_model_and_processor():
     print("🔧 加载 MedGEMMA 基础模型（bf16 + LoRA，单卡加载）...")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    # 不再使用 device_map / 自动分布，避免 meta device 的梯度错误
+    if device.type == "cuda":
+        supports_bf16 = getattr(torch.cuda, "is_bf16_supported", lambda: False)()
+        if supports_bf16:
+            dtype = torch.bfloat16
+            print("🔧 GPU 支持 bfloat16，使用 torch.bfloat16")
+        else:
+            dtype = torch.float16
+            print("🔧 GPU 不支持 bfloat16，使用 torch.float16")
+    else:
+        dtype = torch.float32
+        print("🔧 使用 CPU，dtype=torch.float32")
+
     model = AutoModelForImageTextToText.from_pretrained(
         BASE_MODEL,
-        torch_dtype=torch.bfloat16 if device.type == "cuda" else torch.float32,
+        torch_dtype=dtype,
     )
     model.to(device)
 
@@ -441,7 +430,6 @@ def load_model_and_processor():
         model.config.use_cache = False
     model.gradient_checkpointing_enable()
 
-    # LoRA微调的超参数
     lora_config = LoraConfig(
         r=8,
         lora_alpha=16,
@@ -473,18 +461,71 @@ def load_model_and_processor():
 
     return model, processor
 
-# ===================== 6. 主训练入口 =====================
+
+# ===================== 6. FocalTrainer：在 CE 基础上套 Focal Loss =====================
+
+class FocalTrainer(Trainer):
+    """
+    自定义 Trainer：
+    - 不用模型内置 loss
+    - 自己从 logits + labels 计算 token-level CE
+    - 再做 sample-level Focal Loss:  ((1 - p_t)^gamma) * loss
+    """
+    def __init__(self, focal_gamma: float = 2.0, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.focal_gamma = focal_gamma
+        self.ce_loss_fct = nn.CrossEntropyLoss(reduction="none")
+
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        # 这里一定要接受 **kwargs，兼容 Trainer 内部额外参数（比如 num_items_in_batch）
+        labels = inputs.pop("labels")
+        outputs = model(**inputs)
+        logits = outputs.logits  # (B, T, V)
+
+        vocab_size = logits.size(-1)
+
+        # causal LM: 右移一位
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+
+        loss_flat = self.ce_loss_fct(
+            shift_logits.view(-1, vocab_size),
+            shift_labels.view(-1),
+        )  # (B*T,)
+
+        loss = loss_flat.view(shift_labels.size())  # (B, T)
+
+        # 忽略 label=-100 的位置
+        active_mask = shift_labels.ne(-100)
+        loss = loss * active_mask
+
+        # 每个样本的平均 token loss
+        token_num = active_mask.sum(dim=-1).clamp(min=1)
+        loss_per_sample = loss.sum(dim=-1) / token_num  # (B,)
+
+        if self.focal_gamma is not None and self.focal_gamma > 0:
+            pt = torch.exp(-loss_per_sample)  # 视为“预测正确”的概率
+            focal_factor = (1 - pt) ** self.focal_gamma
+            loss_per_sample = focal_factor * loss_per_sample
+
+        loss_mean = loss_per_sample.mean()
+
+        if return_outputs:
+            return loss_mean, outputs
+        return loss_mean
+
+
+# ===================== 7. 主训练入口 =====================
 
 def main():
     set_seed(42)
 
     train_csv, val_csv, test_csv = prepare_splits()
 
-    balanced_train_df = make_balanced_train_df(train_csv, label_col=COL_TARGET, seed=42)
-    train_hf = HFDataset.from_pandas(balanced_train_df)  # ★ 用 HFDataset
-
-    raw_val = load_dataset("csv", data_files={"val": val_csv})
-    val_hf = raw_val["val"]
+    # 不做重采样：直接用原 train/val 划分
+    raw = load_dataset("csv", data_files={"train": train_csv, "val": val_csv})
+    train_hf = raw["train"]
+    val_hf = raw["val"]
 
     train_ds = DermMetadataDataset(train_hf)
     val_ds = DermMetadataDataset(val_hf)
@@ -498,13 +539,13 @@ def main():
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
-        learning_rate=5e-6,
+        learning_rate=3e-6,
         lr_scheduler_type="cosine",
         warmup_ratio=0.1,
         logging_steps=10,
         save_steps=200,
         save_total_limit=2,
-        bf16=True,
+        bf16=True,           # 如 GPU 不支持，可以改为 bf16=False, fp16=True
         fp16=False,
         report_to="none",
         remove_unused_columns=False,
@@ -512,10 +553,11 @@ def main():
         max_grad_norm=1.0,
     )
 
-    trainer = Trainer(
+    trainer = FocalTrainer(
+        focal_gamma=2.0,       # 你可以改成 1.0 / 1.5 做对比
         model=model,
         args=training_args,
-        train_dataset=train_ds,   # ★ 确认这里是自定义 Dataset
+        train_dataset=train_ds,
         eval_dataset=val_ds,
         data_collator=collator,
     )
@@ -525,7 +567,7 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     model.save_pretrained(OUTPUT_DIR)
     processor.save_pretrained(OUTPUT_DIR)
-    print(f"✅ LoRA adapter 已保存到: {OUTPUT_DIR}")
+    print(f"✅ LoRA+Focal 模型已保存到: {OUTPUT_DIR}")
     print(f"✅ 评估用的 test CSV 在: {TEST_CSV}")
 
 

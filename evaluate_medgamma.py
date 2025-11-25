@@ -36,7 +36,7 @@ METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shap
 TEST_CSV = METADATA_CSV.replace(".csv", "_test_5cls.csv")
 
 # LoRA 权重所在目录（要和 LoRA_medgamma.py 里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\medgemma_lora_derm_from_metadata"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\medgemma_lora_derm_focal"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
