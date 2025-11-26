@@ -33,10 +33,13 @@ BASE_MODEL = "google/medgemma-4b-it"
 METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shape.csv"
 
 # 微调脚本中 prepare_splits() 生成的 test CSV
-TEST_CSV = METADATA_CSV.replace(".csv", "_test_5cls.csv")
+TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
+# TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train.csv"
+# VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
+
 
 # LoRA 权重所在目录（要和 LoRA_medgamma.py 里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_focal"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_focal_with_resnet_prior"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"

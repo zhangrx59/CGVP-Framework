@@ -1,0 +1,13 @@
+====== Classification report (Test set) ======
+
+              precision    recall  f1-score   support
+
+       akiec     0.7812    0.5814    0.6667        43
+         bcc     0.8264    0.9370    0.8782       127
+         bkl     0.8000    0.5714    0.6667         7
+         mel     0.7143    0.6250    0.6667         8
+         nev     0.8750    0.6364    0.7368        11
+
+    accuracy                         0.8163       196
+   macro avg     0.7994    0.6702    0.7230       196
+weighted avg     0.8137    0.8163    0.8077       196
