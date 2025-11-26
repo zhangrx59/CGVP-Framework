@@ -1,4 +1,2 @@
 ISIC_dataset/
-medgemma_lora_derm_from_metadata/
-medgemma_lora_ABCD_focal/
-medgemma_lora_derm_focal/
+lora_focal/
