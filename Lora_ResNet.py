@@ -728,11 +728,11 @@ def main():
 
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
-        num_train_epochs=4,
+        num_train_epochs=20,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
-        learning_rate=1e-6,
+        learning_rate=1e-7,
         lr_scheduler_type="cosine",
         warmup_ratio=0.1,
         logging_steps=10,
