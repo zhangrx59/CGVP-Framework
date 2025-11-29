@@ -39,7 +39,7 @@ TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 
 # LoRA 权重所在目录（要和 LoRA_medgamma.py 里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_focal_with_resnet_prior_softmax5"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_focal_with_resnet_prior_softmax5_fixed2"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"

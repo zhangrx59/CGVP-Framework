@@ -2,3 +2,4 @@ ISIC_dataset/
 lora_focal/
 lora_focal_with_resnet_prior/
 lora_focal_with_resnet_prior_softmax5/
+lora_focal_with_resnet_prior_softmax5_fixed2/

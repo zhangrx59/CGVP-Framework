@@ -13,6 +13,7 @@ from PIL import Image
 import pandas as pd
 from datasets import load_dataset
 from sklearn.model_selection import train_test_split
+import random  # <<< 修改1：用于打乱 label 展示顺序
 
 from transformers import (
     AutoModelForImageTextToText,
@@ -38,7 +39,7 @@ METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata.csv"
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"
 
-TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train.csv"
+TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train_balanced.csv"
 VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
 TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
@@ -73,7 +74,7 @@ COL_TARGET      = "dx"
 ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]  # 固定顺序，后面要用 index
 
 # LoRA 微调输出目录
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_focal_with_resnet_prior_softmax5"
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_focal_with_resnet_prior_softmax5_fixed2"
 
 
 # ===================== 0.1 ResNet+CBAM 定义（用于推理） =====================
@@ -446,6 +447,13 @@ class DermMetadataDataset(TorchDataset):
         # 🔴 ResNet 视觉先验
         resnet_prior = self._get_resnet_prior_text(image_id, image)
 
+        # === 修改2：在提示里随机打乱 label 展示顺序，避免位置偏置 ===
+        label_list = ALLOWED_DX.copy()
+        random.shuffle(label_list)
+        label_codes_str = ", ".join(label_list)
+        # 集合仍然用固定顺序，和训练用的 ALLOWED_DX 一致
+        label_set_str = "{ " + ", ".join(ALLOWED_DX) + " }"
+
         # ====== 保留你原有的提示词逻辑，只在中间插入 ResNet 先验 ======
         user_text = (
             f"Clinical note:\n{clinical_note}\n\n"
@@ -455,8 +463,8 @@ class DermMetadataDataset(TorchDataset):
             "provides the following visual prior based only on the image:\n"
             f"{resnet_prior}\n\n"
             "You should use this visual prior only as auxiliary information and still make your own final decision.\n\n"
-            "Valid label codes are: akiec, bcc, bkl, nev, mel (as defined in the system instructions).\n\n"
-            "You MUST respond with ONLY ONE label code from {akiec, bcc, bkl, nev, mel}.\n"
+            f"Valid label codes are: {label_codes_str} (as defined in the system instructions).\n\n"
+            f"You MUST respond with ONLY ONE label code from {label_set_str}.\n"
             "Do NOT output a list of labels.\n"
             "Do NOT repeat the full disease names.\n"
             "Do NOT add any explanation or extra words.\n\n"
@@ -643,11 +651,18 @@ class Softmax5Trainer(Trainer):
     - 从 logits + labels 中找到“第一个答案 token 的位置”
     - 在该位置，只取 5 个标签对应的 token logit，做 5 类 softmax 交叉熵
     """
-    def __init__(self, label_token_ids: List[int], *args, **kwargs):
+    def __init__(
+        self,
+        label_token_ids: List[int],
+        class_weights: torch.Tensor = None,  # 支持类权重
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         # 长度为 5 的 token id 列表，对应 ALLOWED_DX 顺序
         self.label_token_ids = torch.LongTensor(label_token_ids)
-        self.ce_loss = nn.CrossEntropyLoss()
+        # 先只保存下来，真正用的时候再搬到对应 device
+        self.class_weights = class_weights
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         # 兼容 Trainer 额外参数
@@ -660,9 +675,7 @@ class Softmax5Trainer(Trainer):
         label_token_ids = self.label_token_ids.to(device)
 
         # 找每个样本中，第一个 label != -100 的位置（即答案首 token 位置）
-        # mask: True 表示是答案 token
         mask = labels.ne(-100)  # (B, T)
-        # 如果某行全是 False，会 argmax 到 0，这种情况理论上不会发生（至少有一个答案 token）
         first_pos = mask.float().argmax(dim=1)  # (B,)
 
         batch_idx = torch.arange(logits.size(0), device=device)
@@ -672,7 +685,13 @@ class Softmax5Trainer(Trainer):
         # 只保留 5 个 label token 的 logits，得到 (B, 5)
         logits_5 = logits_first[:, label_token_ids]
 
-        loss = self.ce_loss(logits_5, cls_labels.to(device))
+        # 把权重搬到和 logits 同一个 device 上
+        weight = None
+        if self.class_weights is not None:
+            weight = self.class_weights.to(device)
+
+        # 这里直接用 functional.cross_entropy，避免 ce_loss 本身绑死在 CPU
+        loss = F.cross_entropy(logits_5, cls_labels.to(device), weight=weight)
 
         if return_outputs:
             return loss, outputs
@@ -728,11 +747,11 @@ def main():
 
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
-        num_train_epochs=20,
+        num_train_epochs=2,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
-        learning_rate=1e-7,
+        learning_rate=1e-4,
         lr_scheduler_type="cosine",
         warmup_ratio=0.1,
         logging_steps=10,
@@ -745,9 +764,22 @@ def main():
         seed=42,
         max_grad_norm=0.5,
     )
-##
+
+    # === 修改3：根据训练集中各类样本数量，自动计算 5 类权重 ===
+    df_train = train_hf.to_pandas()
+    dx_counts = df_train["dx"].value_counts().to_dict()
+    class_weights_list = []
+    for cls in ALLOWED_DX:
+        count = dx_counts.get(cls, 1)
+        class_weights_list.append(1.0 / count)
+    class_weights_tensor = torch.tensor(class_weights_list, dtype=torch.float32)
+    # 可选归一化：平均权重为 1
+    class_weights_tensor = class_weights_tensor * (len(class_weights_list) / class_weights_tensor.sum())
+    print("🔧 class weights:", class_weights_tensor.tolist())
+
     trainer = Softmax5Trainer(
         label_token_ids=label_token_ids,
+        class_weights=class_weights_tensor,
         model=model,
         args=training_args,
         train_dataset=train_ds,
