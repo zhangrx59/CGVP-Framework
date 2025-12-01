@@ -5,28 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="298a7252-b432-4b2d-86ef-9ba37e173337" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/adapter_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/chat_template.jinja" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-600/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-600/adapter_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-600/rng_state.pth" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-600/scheduler.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-600/trainer_state.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-600/training_args.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-760/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-760/adapter_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-760/rng_state.pth" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-760/scheduler.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-760/trainer_state.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/checkpoint-760/training_args.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/preprocessor_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/processor_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/special_tokens_map.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/tokenizer.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab4/tokenizer_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Lora_ResNet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Lora_ResNet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab4_results/confusion_matrix_LoRA_linear.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab4_results/confusion_matrix_LoRA_linear.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab4_results/pr_curve_LoRA_linear.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab4_results/pr_curve_LoRA_linear.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab4_results/roc_curve_LoRA_linear.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab4_results/roc_curve_LoRA_linear.png" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

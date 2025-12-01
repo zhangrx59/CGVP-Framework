@@ -71,7 +71,8 @@ COL_BLEEDING    = "出血"
 COL_ELEVATED    = "是否隆起"
 
 COL_TARGET      = "dx"
-ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]  # 固定顺序，后面要用 index
+# ✅ 现在只训练 4 类；bkl 合并到 nev
+ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]  # 固定顺序，后面要用 index
 
 # ===== ResNet 先验控制开关 =====
 # 建议：先用 False 训练一版「不带 ResNet 先验」做对照，如果需要再改 True
@@ -288,12 +289,15 @@ def build_clinical_note(row) -> str:
 
 def normalize_dx(label: str) -> str:
     """
-    把 nv 统一成 nev，其余小写
+    把 nv 和 bkl 都并入 nev，其余小写
     """
     if not isinstance(label, str):
         return ""
     s = label.strip().lower()
     if s == "nv":
+        s = "nev"
+    # ✅ 不再单独管 bkl：训练时把 bkl 直接当作 nev
+    if s == "bkl":
         s = "nev"
     return s
 
@@ -324,6 +328,7 @@ def prepare_splits(
     if COL_TARGET not in df.columns:
         raise ValueError(f"CSV 中找不到标签列 {COL_TARGET!r}")
 
+    # 先做归一化，把 nv / bkl 都归到 nev，再只保留 ALLOWED_DX（4 类）
     df["dx"] = df[COL_TARGET].apply(normalize_dx)
     df = df[df["dx"].isin(ALLOWED_DX)].copy()
 
@@ -371,8 +376,8 @@ class DermMetadataDataset(TorchDataset):
     返回:
       - messages: system+user 提示词（含可选 ResNet 先验）
       - image: PIL 图像
-      - target_text: label code 文本 ('akiec' / 'bcc' / 'bkl' / 'nev' / 'mel')
-      - cls_label_idx: 0~4（在 ALLOWED_DX 里的索引，用于 5 类 softmax）
+      - target_text: label code 文本 ('akiec' / 'bcc' / 'nev' / 'mel')
+      - cls_label_idx: 0~3（在 ALLOWED_DX 里的索引，用于 softmax）
     """
     def __init__(
         self,
@@ -458,7 +463,7 @@ class DermMetadataDataset(TorchDataset):
             label = "nev"
 
         target_text = label  # 直接用 dx code 作为监督信号
-        cls_label_idx = ALLOWED_DX.index(label)  # 0~4
+        cls_label_idx = ALLOWED_DX.index(label)  # 0~3
 
         # 🔴 ResNet 视觉先验文本（已经做了置信度门控）
         resnet_prior = self._get_resnet_prior_text(image_id, image)
@@ -505,15 +510,20 @@ class DermMetadataDataset(TorchDataset):
                         "text": (
                             "You are an expert dermatology assistant specialized in dermoscopic images.\n"
                             "Your task is to classify a skin lesion based on a clinical note and a dermoscopic image.\n\n"
-                            "The dataset uses the following label codes:\n"
+                            "The original dataset uses five label codes:\n"
                             " - akiec = actinic keratoses / intraepithelial carcinoma of the skin (Bowen's disease),\n"
                             " - bcc   = basal cell carcinoma,\n"
-                            " - bkl   = benign keratosis-like lesions (including solar lentigines / seborrheic keratoses / lichen-planus like keratoses),\n"
+                            " - bkl   = benign keratosis-like lesions,\n"
                             " - nev   = melanocytic nevi,\n"
                             " - mel   = melanoma.\n\n"
-                            "When you see these codes, you should understand them as the corresponding disease entities above.\n\n"
+                            "In this training setup, benign keratosis-like lesions (bkl) are merged into 'nev', "
+                            "so the effective label set is:\n"
+                            " - akiec,\n"
+                            " - bcc,\n"
+                            " - nev (including bkl-type lesions),\n"
+                            " - mel.\n\n"
                             "IMPORTANT OUTPUT RULES:\n"
-                            "1. For each case, you MUST output exactly ONE label code from this set: {akiec, bcc, bkl, nev, mel}.\n"
+                            "1. For each case, you MUST output exactly ONE label code from this set: {akiec, bcc, nev, mel}.\n"
                             "2. Do NOT output the full disease names.\n"
                             "3. Do NOT output a list of all labels.\n"
                             "4. Do NOT add explanations, probabilities, or any other text.\n"
@@ -599,7 +609,7 @@ class MedGemmaCollator:
             labels[labels == pad_id] = -100
 
         model_inputs["labels"] = labels
-        # 新增：5 类分类标签（0~4），供 Trainer 使用
+        # 新增：4 类分类标签（0~3），供 Trainer 使用
         model_inputs["cls_labels"] = torch.tensor(cls_labels, dtype=torch.long)
 
         return model_inputs
@@ -638,6 +648,7 @@ def load_model_and_processor():
         model.config.use_cache = False
     model.gradient_checkpointing_enable()
 
+    # 先保持你原来的 LoRA 配置（如需再扩 target_modules 可以后续迭代）
     lora_config = LoraConfig(
         r=8,
         lora_alpha=16,
@@ -667,14 +678,14 @@ def load_model_and_processor():
     return model, processor
 
 
-# ===================== 6. Softmax5Trainer：强制 5 类 softmax 头 =====================
+# ===================== 6. SoftmaxTrainer：强制 4 类 softmax 头 =====================
 
 class Softmax5Trainer(Trainer):
     """
     自定义 Trainer：
     - 不用模型内置的 token-level loss
     - 从 logits + labels 中找到“第一个答案 token 的位置”
-    - 在该位置，只取 5 个标签对应的 token logit，做 5 类 softmax 交叉熵
+    - 在该位置，只取 N 个标签对应的 token logit，做 N 类 softmax 交叉熵
     """
     def __init__(
         self,
@@ -684,7 +695,7 @@ class Softmax5Trainer(Trainer):
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        # 长度为 5 的 token id 列表，对应 ALLOWED_DX 顺序
+        # 长度为 N 的 token id 列表，对应 ALLOWED_DX 顺序
         self.label_token_ids = torch.LongTensor(label_token_ids)
         # 先只保存下来，真正用的时候再搬到对应 device
         self.class_weights = class_weights
@@ -707,8 +718,8 @@ class Softmax5Trainer(Trainer):
         # 取出每个样本在答案首 token 位置的 logits: (B, V)
         logits_first = logits[batch_idx, first_pos, :]  # (B, V)
 
-        # 只保留 5 个 label token 的 logits，得到 (B, 5)
-        logits_5 = logits_first[:, label_token_ids]
+        # 只保留 N 个 label token 的 logits，得到 (B, N)
+        logits_n = logits_first[:, label_token_ids]
 
         # 把权重搬到和 logits 同一个 device 上
         weight = None
@@ -717,7 +728,7 @@ class Softmax5Trainer(Trainer):
 
         # 这里直接用 functional.cross_entropy，避免 ce_loss 本身绑死在 CPU
         loss = F.cross_entropy(
-            logits_5,
+            logits_n,
             cls_labels.to(device),
             weight=weight,
             label_smoothing=0.1,
@@ -764,7 +775,7 @@ def main():
         resnet_device=device,
     )
 
-    # ===================== 关键：构造 5 个 label 的 token id =====================
+    # ===================== 关键：构造 N 个 label 的 token id =====================
     tokenizer = processor.tokenizer
     label_token_ids: List[int] = []
     for label in ALLOWED_DX:
@@ -772,7 +783,8 @@ def main():
         if not ids:
             raise ValueError(f"Label {label!r} 被 tokenizer 分成空 token 序列，异常")
         label_token_ids.append(ids[0])
-    print("🔧 5 类标签的首 token id:", label_token_ids)
+    print("🔧 有效类别:", ALLOWED_DX)
+    print("🔧 各类别首 token id:", label_token_ids)
 
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
@@ -794,12 +806,14 @@ def main():
         max_grad_norm=0.5,
     )
 
-    # === 类权重：按样本数 1/count 计算（保持你原来的写法） ===
+    # === 类权重：按归一化后的 dx 统计 ===
     df_train = train_hf.to_pandas()
-    dx_counts = df_train["dx"].value_counts().to_dict()
+    df_train[COL_TARGET] = df_train[COL_TARGET].apply(normalize_dx)
+    dx_counts = df_train[COL_TARGET].value_counts().to_dict()
     class_weights_list = []
     for cls in ALLOWED_DX:
         count = dx_counts.get(cls, 1)
+        # 用 1/sqrt(count) 略缓和极端不平衡
         class_weights_list.append(1.0 / math.sqrt(count))
     class_weights_tensor = torch.tensor(class_weights_list, dtype=torch.float32)
     # 可选归一化：平均权重为 1
@@ -821,7 +835,7 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     model.save_pretrained(OUTPUT_DIR)
     processor.save_pretrained(OUTPUT_DIR)
-    print(f"✅ LoRA+ResNetPrior+Softmax5 模型已保存到: {OUTPUT_DIR}")
+    print(f"✅ LoRA+ResNetPrior+SoftmaxN 模型已保存到: {OUTPUT_DIR}")
     print(f"✅ 评估用的 test CSV 在: {TEST_CSV}")
 
 
