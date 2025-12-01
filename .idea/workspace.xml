@@ -5,21 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="298a7252-b432-4b2d-86ef-9ba37e173337" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/resnet50_results/classification_report.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/resnet50_results/confusion_matrix.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/resnet50_results/pr_curves.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/resnet50_results/roc_curves.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Lora_ResNet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Lora_ResNet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/a.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluate_medgamma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgamma.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal_results/confusion_matrix_LoRA_linear.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal_results/pr_curve_LoRA_linear.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal_results/roc_curve_LoRA_linear.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resnet50_eval_outputs/classification_report.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resnet50_eval_outputs/confusion_matrix.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resnet50_eval_outputs/pr_curves.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resnet50_eval_outputs/roc_curves.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

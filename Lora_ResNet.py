@@ -80,7 +80,7 @@ USE_RESNET_PRIOR = False
 RESNET_CONF_THRESH = 0.7
 
 # LoRA 微调输出目录
-OUTPUT_DIR = r"/lab3"
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab4"
 
 
 # ===================== 0.1 ResNet+CBAM 定义（用于推理） =====================

@@ -39,14 +39,14 @@ TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 
 # LoRA 权重所在目录（要和 LoRA_medgamma.py 里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab2"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab4"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录
-LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab2_results"
+LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab4_results"
 os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）
@@ -271,6 +271,23 @@ def evaluate_lora_linear():
     total, correct = 0, 0
     missing_image = 0
 
+    # === ① 计算 5 个类别的首 token id（与训练保持一致） ===
+    label_token_ids = []
+    for cls in ALLOWED_DX:
+        # 只取第一个 token 作为类别 token
+        ids = processor.tokenizer(cls, add_special_tokens=False).input_ids
+        if len(ids) == 0:
+            raise ValueError(f"标签 {cls} tokenizer 结果为空")
+        label_token_ids.append(ids[0])
+    label_token_ids = torch.tensor(label_token_ids, device=device)  # shape (5,)
+
+    # === ② 一层 logit bias + mel 阈值的超参（先写死，后面可以在 val 上调） ===
+    # 顺序对应 ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]
+    logit_bias = torch.tensor([0.2, 0.0, 0.5, 0.2, -0.5], device=device)
+    mel_idx = ALLOWED_DX.index("mel")
+    mel_thresh = 0.6  # 只有当 mel 概率 >= 0.6 时才允许预测为 mel
+
+
     for _, row in df.iterrows():
         image_id = str(row[COL_IMAGE_ID])
         label_raw = normalize_dx(str(row[COL_TARGET]))
@@ -342,21 +359,28 @@ def evaluate_lora_linear():
         ).to(device)
 
         with torch.no_grad():
-            generated_ids = model.generate(
-                **inputs,
-                max_new_tokens=8,
-                do_sample=False,
-            )
+            outputs = model(**inputs)
+            # outputs.logits: (1, T, vocab_size)
+        last_logits = outputs.logits[0, -1, :]  # (vocab_size,)
+        logits_5 = last_logits[label_token_ids]  # 只取 5 个类别的 logits，shape (5,)
 
-        # 方案 A：对完整 decode 的文本按 "Final answer:" 切分，只在答案部分做正则
-        full_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-        low = full_text.lower()
-        if "final answer:" in low:
-            ans_part = low.split("final answer:")[-1]
-        else:
-            ans_part = low
+        # === ① 一层 logit bias 调整 ===
+        logits_5 = logits_5 + logit_bias
 
-        pred_label = extract_dx_code(ans_part)
+        # === ② mel 阈值处理：如果 mel 概率不够高，则压一压 mel ===
+        probs_5 = torch.softmax(logits_5, dim=-1)
+        pred_idx = int(torch.argmax(probs_5).item())
+
+        if pred_idx == mel_idx and probs_5[mel_idx] < mel_thresh:
+            # mel 置信度不够，把 mel logit 再减一点重新选一次
+            tmp_logits = logits_5.clone()
+            tmp_logits[mel_idx] -= 1.0
+            probs_5 = torch.softmax(tmp_logits, dim=-1)
+            pred_idx = int(torch.argmax(probs_5).item())
+
+        pred_label = ALLOWED_DX[pred_idx]
+        # 为了保持原来的 log 输出格式，构造一个简单的 ans_part 字符串
+        ans_part = f"\n\n\n\n\nmodel\n{pred_label}\n"
 
         total += 1
         if pred_label == label_raw:
