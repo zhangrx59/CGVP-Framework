@@ -1,6 +1,6 @@
 # LoRA_medgamma_focal_with_resnet_prior_softmax5.py
 # -*- coding: utf-8 -*-
-
+import math
 import os
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple, List
@@ -13,7 +13,7 @@ from PIL import Image
 import pandas as pd
 from datasets import load_dataset
 from sklearn.model_selection import train_test_split
-import random  # <<< 修改1：用于打乱 label 展示顺序
+import random  # 用于打乱 label 展示顺序
 
 from transformers import (
     AutoModelForImageTextToText,
@@ -73,8 +73,14 @@ COL_ELEVATED    = "是否隆起"
 COL_TARGET      = "dx"
 ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]  # 固定顺序，后面要用 index
 
+# ===== ResNet 先验控制开关 =====
+# 建议：先用 False 训练一版「不带 ResNet 先验」做对照，如果需要再改 True
+USE_RESNET_PRIOR = False
+# 只有当 ResNet 对 top 类的概率 ≥ 该阈值时，才认为是“相对可信”的先验
+RESNET_CONF_THRESH = 0.7
+
 # LoRA 微调输出目录
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lora_focal_with_resnet_prior_softmax5_fixed2"
+OUTPUT_DIR = r"/lab3"
 
 
 # ===================== 0.1 ResNet+CBAM 定义（用于推理） =====================
@@ -301,7 +307,7 @@ def prepare_splits(
     test_ratio: float = 0.15,
 ) -> Tuple[str, str, str]:
     """
-    不做重采样，只做分层划分，结果写入 *_train_5cls.csv / *_val_5cls.csv / *_test_5cls.csv
+    不做重采样，只做分层划分，结果写入 TRAIN_CSV/VAL_CSV/TEST_CSV
     """
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-6
 
@@ -363,7 +369,7 @@ class DermMetadataDataset(TorchDataset):
     """
     使用 HF Dataset 或 pandas.DataFrame 作为底层存储，
     返回:
-      - messages: system+user 提示词（含 ResNet 先验）
+      - messages: system+user 提示词（含可选 ResNet 先验）
       - image: PIL 图像
       - target_text: label code 文本 ('akiec' / 'bcc' / 'bkl' / 'nev' / 'mel')
       - cls_label_idx: 0~4（在 ALLOWED_DX 里的索引，用于 5 类 softmax）
@@ -412,16 +418,26 @@ class DermMetadataDataset(TorchDataset):
         top_label = self.resnet_dx_categories[top_idx]
         top_prob = float(probs[top_idx])
 
+        # 收集完整概率分布（可选）
         parts = []
         for cls, p in zip(self.resnet_dx_categories, probs):
             parts.append(f"{cls}={p:.3f}")
         dist_str = ", ".join(parts)
 
-        prior_text = (
-            f"ResNet visual classifier top prediction: {top_label} "
-            f"(probability {top_prob:.3f}). "
-            f"Full probability distribution over labels: {dist_str}."
-        )
+        # === 置信度门控：高置信度才给明确“建议”，低置信度则标记为不可靠 ===
+        if top_prob >= RESNET_CONF_THRESH:
+            prior_text = (
+                f"The independent ResNet image classifier is relatively confident "
+                f"and suggests the lesion might be '{top_label}' "
+                f"(approximate probability {top_prob:.3f}). "
+                f"Full probability distribution: {dist_str}."
+            )
+        else:
+            prior_text = (
+                "The independent ResNet image classifier is not confident for this case. "
+                "Its prediction is uncertain and should be treated as low-confidence auxiliary information: "
+                f"{dist_str}."
+            )
 
         self._prior_cache[image_id] = prior_text
         return prior_text
@@ -444,25 +460,34 @@ class DermMetadataDataset(TorchDataset):
         target_text = label  # 直接用 dx code 作为监督信号
         cls_label_idx = ALLOWED_DX.index(label)  # 0~4
 
-        # 🔴 ResNet 视觉先验
+        # 🔴 ResNet 视觉先验文本（已经做了置信度门控）
         resnet_prior = self._get_resnet_prior_text(image_id, image)
 
-        # === 修改2：在提示里随机打乱 label 展示顺序，避免位置偏置 ===
+        # 随机打乱 label 展示顺序，避免位置偏置
         label_list = ALLOWED_DX.copy()
         random.shuffle(label_list)
         label_codes_str = ", ".join(label_list)
         # 集合仍然用固定顺序，和训练用的 ALLOWED_DX 一致
         label_set_str = "{ " + ", ".join(ALLOWED_DX) + " }"
 
-        # ====== 保留你原有的提示词逻辑，只在中间插入 ResNet 先验 ======
+        # === 根据开关决定是否插入 ResNet 先验 ===
+        if USE_RESNET_PRIOR:
+            prior_block = (
+                "Additionally, an independent ResNet-based dermoscopic image classifier "
+                "provides the following visual prior based only on the image:\n"
+                f"{resnet_prior}\n\n"
+                "You should use this visual prior only as auxiliary information "
+                "and still make your own final decision.\n\n"
+            )
+        else:
+            prior_block = ""
+
+        # ====== 提示词：只在中间插入 prior_block，其它逻辑不变 ======
         user_text = (
             f"Clinical note:\n{clinical_note}\n\n"
             "You are given the above clinical note together with a dermoscopic image of the lesion.\n"
             "Based on both the clinical information and the image, decide which label code best describes the lesion.\n\n"
-            "Additionally, an independent ResNet-based dermoscopic image classifier "
-            "provides the following visual prior based only on the image:\n"
-            f"{resnet_prior}\n\n"
-            "You should use this visual prior only as auxiliary information and still make your own final decision.\n\n"
+            f"{prior_block}"
             f"Valid label codes are: {label_codes_str} (as defined in the system instructions).\n\n"
             f"You MUST respond with ONLY ONE label code from {label_set_str}.\n"
             "Do NOT output a list of labels.\n"
@@ -691,7 +716,12 @@ class Softmax5Trainer(Trainer):
             weight = self.class_weights.to(device)
 
         # 这里直接用 functional.cross_entropy，避免 ce_loss 本身绑死在 CPU
-        loss = F.cross_entropy(logits_5, cls_labels.to(device), weight=weight)
+        loss = F.cross_entropy(
+            logits_5,
+            cls_labels.to(device),
+            weight=weight,
+            label_smoothing=0.1,
+        )
 
         if return_outputs:
             return loss, outputs
@@ -705,7 +735,7 @@ def main():
 
     train_csv, val_csv, test_csv = prepare_splits()
 
-    # 不做重采样：直接用原 train/val 划分
+    # 不做重采样：直接用原 train/val 划分（如你已手工生成平衡版，则这里复用）
     raw = load_dataset("csv", data_files={"train": train_csv, "val": val_csv})
     train_hf = raw["train"]
     val_hf = raw["val"]
@@ -718,7 +748,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     resnet_model, resnet_transform, resnet_dx_categories = load_resnet_prior_model(device)
 
-    # 构造 Dataset（带 ResNet 先验）
+    # 构造 Dataset（带 / 不带 ResNet 先验由 USE_RESNET_PRIOR 控制）
     train_ds = DermMetadataDataset(
         train_hf,
         resnet_model=resnet_model,
@@ -735,7 +765,6 @@ def main():
     )
 
     # ===================== 关键：构造 5 个 label 的 token id =====================
-    # 我们只看 label code 的“首 token”，它们的 token id 组成 5 类 softmax 头
     tokenizer = processor.tokenizer
     label_token_ids: List[int] = []
     for label in ALLOWED_DX:
@@ -747,11 +776,11 @@ def main():
 
     training_args = TrainingArguments(
         output_dir=OUTPUT_DIR,
-        num_train_epochs=2,
+        num_train_epochs=5,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
-        learning_rate=1e-4,
+        learning_rate=5e-5,
         lr_scheduler_type="cosine",
         warmup_ratio=0.1,
         logging_steps=10,
@@ -765,13 +794,13 @@ def main():
         max_grad_norm=0.5,
     )
 
-    # === 修改3：根据训练集中各类样本数量，自动计算 5 类权重 ===
+    # === 类权重：按样本数 1/count 计算（保持你原来的写法） ===
     df_train = train_hf.to_pandas()
     dx_counts = df_train["dx"].value_counts().to_dict()
     class_weights_list = []
     for cls in ALLOWED_DX:
         count = dx_counts.get(cls, 1)
-        class_weights_list.append(1.0 / count)
+        class_weights_list.append(1.0 / math.sqrt(count))
     class_weights_tensor = torch.tensor(class_weights_list, dtype=torch.float32)
     # 可选归一化：平均权重为 1
     class_weights_tensor = class_weights_tensor * (len(class_weights_list) / class_weights_tensor.sum())
