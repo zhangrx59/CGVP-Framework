@@ -71,7 +71,7 @@ COL_BLEEDING    = "出血"
 COL_ELEVATED    = "是否隆起"
 
 COL_TARGET      = "dx"
-# ✅ 现在只训练 4 类；bkl 合并到 nev
+# 现在只训练 4 类：akiec, bcc, nev, mel
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]  # 固定顺序，后面要用 index
 
 # ===== ResNet 先验控制开关 =====
@@ -81,7 +81,7 @@ USE_RESNET_PRIOR = False
 RESNET_CONF_THRESH = 0.7
 
 # LoRA 微调输出目录
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab4"
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5"
 
 
 # ===================== 0.1 ResNet+CBAM 定义（用于推理） =====================
@@ -289,15 +289,12 @@ def build_clinical_note(row) -> str:
 
 def normalize_dx(label: str) -> str:
     """
-    把 nv 和 bkl 都并入 nev，其余小写
+    把 nv 归一化到 nev，其余小写
     """
     if not isinstance(label, str):
         return ""
     s = label.strip().lower()
     if s == "nv":
-        s = "nev"
-    # ✅ 不再单独管 bkl：训练时把 bkl 直接当作 nev
-    if s == "bkl":
         s = "nev"
     return s
 
@@ -328,7 +325,7 @@ def prepare_splits(
     if COL_TARGET not in df.columns:
         raise ValueError(f"CSV 中找不到标签列 {COL_TARGET!r}")
 
-    # 先做归一化，把 nv / bkl 都归到 nev，再只保留 ALLOWED_DX（4 类）
+    # 先做归一化，再只保留 ALLOWED_DX（4 类）
     df["dx"] = df[COL_TARGET].apply(normalize_dx)
     df = df[df["dx"].isin(ALLOWED_DX)].copy()
 
@@ -510,18 +507,12 @@ class DermMetadataDataset(TorchDataset):
                         "text": (
                             "You are an expert dermatology assistant specialized in dermoscopic images.\n"
                             "Your task is to classify a skin lesion based on a clinical note and a dermoscopic image.\n\n"
-                            "The original dataset uses five label codes:\n"
+                            "The dataset uses four label codes:\n"
                             " - akiec = actinic keratoses / intraepithelial carcinoma of the skin (Bowen's disease),\n"
                             " - bcc   = basal cell carcinoma,\n"
-                            " - bkl   = benign keratosis-like lesions,\n"
                             " - nev   = melanocytic nevi,\n"
                             " - mel   = melanoma.\n\n"
-                            "In this training setup, benign keratosis-like lesions (bkl) are merged into 'nev', "
-                            "so the effective label set is:\n"
-                            " - akiec,\n"
-                            " - bcc,\n"
-                            " - nev (including bkl-type lesions),\n"
-                            " - mel.\n\n"
+                            "In this training setup, only these four labels are used.\n\n"
                             "IMPORTANT OUTPUT RULES:\n"
                             "1. For each case, you MUST output exactly ONE label code from this set: {akiec, bcc, nev, mel}.\n"
                             "2. Do NOT output the full disease names.\n"

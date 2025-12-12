@@ -29,7 +29,7 @@ from sklearn.preprocessing import label_binarize
 
 BASE_MODEL = "google/medgemma-4b-it"
 
-# 原始 metadata CSV
+# 原始 metadata CSV（不一定用得到，只是留档）
 METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shape.csv"
 
 # 微调脚本中 prepare_splits() 生成的 test CSV
@@ -38,7 +38,7 @@ TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 # VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
 
 
-# LoRA 权重所在目录（要和 LoRA_medgamma.py 里的 OUTPUT_DIR 一致）
+# LoRA 权重所在目录（要和微调脚本里的 OUTPUT_DIR 一致）
 LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab4"
 
 # 图像根目录和后缀
@@ -76,11 +76,11 @@ COL_ELEVATED    = "是否隆起"
 
 COL_TARGET      = "dx"   # 如果你的列名是“诊断标签”，这里改成 "诊断标签"
 
-# 只评估这 5 类
-ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]
+# 只评估这 4 类
+ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
 
 
-# ========== 一些工具函数（和 LoRA_medgamma.py 保持一致） ==========
+# ========== 一些工具函数（和微调脚本保持一致） ==========
 
 def yn_str(v, yes: str, no: str, unk: str = "unknown") -> str:
     """
@@ -198,13 +198,15 @@ def normalize_dx(label: str) -> str:
 
 def extract_dx_code(text: str) -> str:
     """
-    从模型输出文本中提取 5 类 dx code：
+    从模型输出文本中提取 4 类 dx code：
     - 支持 nv/nev，统一成 nev
+    - 只保留 akiec, bcc, nev, mel
+    （当前主评估逻辑用 logits，不再依赖这个函数，但留作备选）
     """
     if not isinstance(text, str):
         return "unknown"
     text_lower = text.lower()
-    m = re.search(r"\b(mel|bcc|bkl|nev|nv|akiec)\b", text_lower)
+    m = re.search(r"\b(mel|bcc|nev|nv|akiec)\b", text_lower)
     if not m:
         return "unknown"
     code = m.group(1)
@@ -250,13 +252,13 @@ def load_lora_model_and_processor():
     return model, processor, device
 
 
-# ========== 逐样本线性推理评估 Test 集（方案 A：按 "Final answer:" 切） ==========
+# ========== 逐样本线性推理评估 Test 集（直接看 final logits） ==========
 
 def evaluate_lora_linear():
     if not os.path.exists(TEST_CSV):
         raise FileNotFoundError(
             f"未找到测试集 CSV: {TEST_CSV}\n"
-            f"请先运行微调脚本生成 *_test_5cls.csv。"
+            f"请先运行微调脚本生成 *_test.csv。"
         )
 
     df = pd.read_csv(TEST_CSV, encoding="utf-8")
@@ -271,7 +273,7 @@ def evaluate_lora_linear():
     total, correct = 0, 0
     missing_image = 0
 
-    # === ① 计算 5 个类别的首 token id（与训练保持一致） ===
+    # === ① 计算 4 个类别的首 token id（与训练保持一致） ===
     label_token_ids = []
     for cls in ALLOWED_DX:
         # 只取第一个 token 作为类别 token
@@ -279,19 +281,19 @@ def evaluate_lora_linear():
         if len(ids) == 0:
             raise ValueError(f"标签 {cls} tokenizer 结果为空")
         label_token_ids.append(ids[0])
-    label_token_ids = torch.tensor(label_token_ids, device=device)  # shape (5,)
+    label_token_ids = torch.tensor(label_token_ids, device=device)  # shape (4,)
 
     # === ② 一层 logit bias + mel 阈值的超参（先写死，后面可以在 val 上调） ===
-    # 顺序对应 ALLOWED_DX = ["akiec", "bcc", "bkl", "nev", "mel"]
-    logit_bias = torch.tensor([0.2, 0.0, 0.5, 0.2, -0.5], device=device)
+    # 顺序对应 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
+    logit_bias = torch.tensor([0.2, 0.0, 0.2, -0.5], device=device)
     mel_idx = ALLOWED_DX.index("mel")
     mel_thresh = 0.6  # 只有当 mel 概率 >= 0.6 时才允许预测为 mel
-
 
     for _, row in df.iterrows():
         image_id = str(row[COL_IMAGE_ID])
         label_raw = normalize_dx(str(row[COL_TARGET]))
         if label_raw not in ALLOWED_DX:
+            # 清理后的 CSV 不应再出现其他类别，这里只是防御
             continue
 
         img_path = os.path.join(IMAGE_ROOT_DIR, image_id + IMAGE_EXT)
@@ -320,7 +322,7 @@ def evaluate_lora_linear():
                             "You are a dermatology assistant. "
                             "Given the clinical note and the skin lesion image, "
                             "your task is to classify the lesion into one of the following classes: "
-                            "akiec, bcc, bkl, nev, mel. "
+                            "akiec, bcc, nev, mel. "
                             "Always answer with exactly one lowercase class name "
                             "from this set, with no explanations."
                         ),
@@ -337,7 +339,7 @@ def evaluate_lora_linear():
                             "Based on the clinical note and the provided skin lesion image, "
                             "predict the most likely disease class.\n"
                             "Answer with only one class name:\n"
-                            "akiec, bcc, bkl, nev, mel.\n"
+                            "akiec, bcc, nev, mel.\n"
                             "Final answer:"
                         ),
                     },
@@ -362,25 +364,23 @@ def evaluate_lora_linear():
             outputs = model(**inputs)
             # outputs.logits: (1, T, vocab_size)
         last_logits = outputs.logits[0, -1, :]  # (vocab_size,)
-        logits_5 = last_logits[label_token_ids]  # 只取 5 个类别的 logits，shape (5,)
+        logits_4 = last_logits[label_token_ids]  # 只取 4 个类别的 logits，shape (4,)
 
         # === ① 一层 logit bias 调整 ===
-        logits_5 = logits_5 + logit_bias
+        logits_4 = logits_4 + logit_bias
 
-        # === ② mel 阈值处理：如果 mel 概率不够高，则压一压 mel ===
-        probs_5 = torch.softmax(logits_5, dim=-1)
-        pred_idx = int(torch.argmax(probs_5).item())
+        # === ② mel 阈值处理：如果 mel 概率不够高，则压一压 mel 再选一次 ===
+        probs_4 = torch.softmax(logits_4, dim=-1)
+        pred_idx = int(torch.argmax(probs_4).item())
 
-        if pred_idx == mel_idx and probs_5[mel_idx] < mel_thresh:
+        if pred_idx == mel_idx and probs_4[mel_idx] < mel_thresh:
             # mel 置信度不够，把 mel logit 再减一点重新选一次
-            tmp_logits = logits_5.clone()
+            tmp_logits = logits_4.clone()
             tmp_logits[mel_idx] -= 1.0
-            probs_5 = torch.softmax(tmp_logits, dim=-1)
-            pred_idx = int(torch.argmax(probs_5).item())
+            probs_4 = torch.softmax(tmp_logits, dim=-1)
+            pred_idx = int(torch.argmax(probs_4).item())
 
         pred_label = ALLOWED_DX[pred_idx]
-        # 为了保持原来的 log 输出格式，构造一个简单的 ans_part 字符串
-        ans_part = f"\n\n\n\n\nmodel\n{pred_label}\n"
 
         total += 1
         if pred_label == label_raw:
@@ -391,10 +391,10 @@ def evaluate_lora_linear():
 
         print(
             f"🩺 [{total}] image_id={image_id} | pred={pred_label} | true={label_raw} "
-            f"| {'✅' if pred_label == label_raw else '❌'} | ans_part={pred_label!r}"
+            f"| {'✅' if pred_label == label_raw else '❌'}"
         )
 
-    print("\n====== 📊 LoRA 模型在线性推理下的 Test 集评估结果 ======")
+    print("\n====== 📊 LoRA 模型在线性推理下的 Test 集评估结果（4 类） ======")
     print(f"有效样本数: {total}")
     print(f"缺少图片样本数: {missing_image}")
     if total > 0:
@@ -419,14 +419,14 @@ def evaluate_lora_linear():
 
     fig_cm, ax_cm = plt.subplots(figsize=(6, 5))
     im = ax_cm.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
-    fig_cm.colorbar(im, ax=ax_cm)
+    fig_cm.colorbar(im, ax_cm)
     ax_cm.set_xticks(range(len(classes)))
     ax_cm.set_yticks(range(len(classes)))
     ax_cm.set_xticklabels(classes)
     ax_cm.set_yticklabels(classes)
     ax_cm.set_xlabel("Predicted label")
     ax_cm.set_ylabel("True label")
-    ax_cm.set_title("Confusion Matrix (LoRA, 5 classes, linear)")
+    ax_cm.set_title("Confusion Matrix (LoRA, 4 classes, linear)")
     plt.setp(ax_cm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
     thresh = cm.max() / 2.0 if cm.max() > 0 else 0.5
@@ -439,7 +439,7 @@ def evaluate_lora_linear():
             )
 
     fig_cm.tight_layout()
-    cm_path = os.path.join(LORA_PLOTS_DIR, "confusion_matrix_LoRA_linear.png")
+    cm_path = os.path.join(LORA_PLOTS_DIR, "confusion_matrix_LoRA_linear_4cls.png")
     fig_cm.savefig(cm_path, dpi=300)
     plt.close(fig_cm)
     print(f"📁 混淆矩阵图已保存到: {cm_path}")
@@ -467,10 +467,10 @@ def evaluate_lora_linear():
     ax_roc.set_ylim([0.0, 1.05])
     ax_roc.set_xlabel("False Positive Rate")
     ax_roc.set_ylabel("True Positive Rate")
-    ax_roc.set_title("ROC Curves (LoRA, 5 classes, pseudo-scores, linear)")
+    ax_roc.set_title("ROC Curves (LoRA, 4 classes, pseudo-scores, linear)")
     ax_roc.legend(loc="lower right", fontsize=8)
     fig_roc.tight_layout()
-    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_linear.png")
+    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_linear_4cls.png")
     fig_roc.savefig(roc_path, dpi=300)
     plt.close(fig_roc)
     print(f"📁 ROC 曲线图已保存到: {roc_path}")
@@ -491,16 +491,16 @@ def evaluate_lora_linear():
     ax_pr.set_ylim([0.0, 1.05])
     ax_pr.set_xlabel("Recall")
     ax_pr.set_ylabel("Precision")
-    ax_pr.set_title("Precision-Recall Curves (LoRA, 5 classes, pseudo-scores, linear)")
+    ax_pr.set_title("Precision-Recall Curves (LoRA, 4 classes, pseudo-scores, linear)")
     ax_pr.legend(loc="lower left", fontsize=8)
     fig_pr.tight_layout()
-    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_linear.png")
+    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_linear_4cls.png")
     fig_pr.savefig(pr_path, dpi=300)
     plt.close(fig_pr)
     print(f"📁 P-R 曲线图已保存到: {pr_path}")
 
 
-# ========== 主入口：评估 LoRA 微调后模型（线性推理 + Final answer 切分） ==========
+# ========== 主入口：评估 LoRA 微调后模型（线性推理） ==========
 
 if __name__ == "__main__":
     warnings.filterwarnings("once")
