@@ -14,14 +14,16 @@ import matplotlib.pyplot as plt
 from transformers import AutoModelForImageTextToText, AutoProcessor, set_seed
 from peft import PeftModel
 
-from sklearn.metrics import (
+from sklearn.metrics import(
     classification_report,
     confusion_matrix,
     roc_curve,
     auc,
     precision_recall_curve,
     average_precision_score,
+    ConfusionMatrixDisplay,   # ★ 新增
 )
+
 from sklearn.preprocessing import label_binarize
 
 
@@ -34,19 +36,16 @@ METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shap
 
 # 微调脚本中 prepare_splits() 生成的 test CSV
 TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
-# TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train.csv"
-# VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
-
 
 # LoRA 权重所在目录（要和微调脚本里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab4"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录
-LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab4_results"
+LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5_results"
 os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）
@@ -74,9 +73,9 @@ COL_MORPH_CHANGE= "形态变化"
 COL_BLEEDING    = "出血"
 COL_ELEVATED    = "是否隆起"
 
-COL_TARGET      = "dx"   # 如果你的列名是“诊断标签”，这里改成 "诊断标签"
+COL_TARGET      = "dx"
 
-# 只评估这 4 类
+# 现在只评估这 4 类（注意顺序必须固定）
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
 
 
@@ -198,10 +197,7 @@ def normalize_dx(label: str) -> str:
 
 def extract_dx_code(text: str) -> str:
     """
-    从模型输出文本中提取 4 类 dx code：
-    - 支持 nv/nev，统一成 nev
-    - 只保留 akiec, bcc, nev, mel
-    （当前主评估逻辑用 logits，不再依赖这个函数，但留作备选）
+    从模型输出文本中提取 4 类 dx code（备用函数）
     """
     if not isinstance(text, str):
         return "unknown"
@@ -240,7 +236,7 @@ def load_lora_model_and_processor():
 
     base_model = AutoModelForImageTextToText.from_pretrained(
         BASE_MODEL,
-        dtype=dtype,
+        torch_dtype=dtype,
     )
     model = PeftModel.from_pretrained(base_model, LORA_DIR)
     model.to(device)
@@ -267,6 +263,11 @@ def evaluate_lora_linear():
     if COL_IMAGE_ID not in df.columns or COL_TARGET not in df.columns:
         raise ValueError("TEST_CSV 中缺少 image_id 或 dx 列")
 
+    # 仅保留 4 类，避免有旧的 bkl 干扰
+    df["dx"] = df[COL_TARGET].apply(normalize_dx)
+    df = df[df["dx"].isin(ALLOWED_DX)].reset_index(drop=True)
+    print("📊 按 4 类过滤后的标签分布:", df["dx"].value_counts().to_dict())
+
     model, processor, device = load_lora_model_and_processor()
 
     y_true, y_pred = [], []
@@ -276,12 +277,12 @@ def evaluate_lora_linear():
     # === ① 计算 4 个类别的首 token id（与训练保持一致） ===
     label_token_ids = []
     for cls in ALLOWED_DX:
-        # 只取第一个 token 作为类别 token
-        ids = processor.tokenizer(cls, add_special_tokens=False).input_ids
+        ids = processor.tokenizer(cls, add_special_tokens=False)["input_ids"]
         if len(ids) == 0:
             raise ValueError(f"标签 {cls} tokenizer 结果为空")
         label_token_ids.append(ids[0])
     label_token_ids = torch.tensor(label_token_ids, device=device)  # shape (4,)
+    print("🔧 4 类标签的首 token id:", label_token_ids.tolist())
 
     # === ② 一层 logit bias + mel 阈值的超参（先写死，后面可以在 val 上调） ===
     # 顺序对应 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
@@ -291,10 +292,7 @@ def evaluate_lora_linear():
 
     for _, row in df.iterrows():
         image_id = str(row[COL_IMAGE_ID])
-        label_raw = normalize_dx(str(row[COL_TARGET]))
-        if label_raw not in ALLOWED_DX:
-            # 清理后的 CSV 不应再出现其他类别，这里只是防御
-            continue
+        label_raw = normalize_dx(str(row["dx"]))
 
         img_path = os.path.join(IMAGE_ROOT_DIR, image_id + IMAGE_EXT)
         if not os.path.exists(img_path):
@@ -408,41 +406,46 @@ def evaluate_lora_linear():
     y_true_arr = np.array(y_true)
     y_pred_arr = np.array(y_pred)
 
-    print("\n====== 📊 classification_report ======")
-    print(classification_report(y_true_arr, y_pred_arr, labels=classes))
+    print("📊 y_true 标签分布:", {c: int((y_true_arr == c).sum()) for c in classes})
+    print("📊 y_pred 标签分布:", {c: int((y_pred_arr == c).sum()) for c in classes})
 
-    # 混淆矩阵
+    print("\n====== 📊 classification_report ======")
+    # labels=classes 表示按 ALLOWED_DX 的顺序输出；target_names 保证行名好看
+    print(
+        classification_report(
+            y_true_arr,
+            y_pred_arr,
+            labels=classes,
+            target_names=classes,
+            zero_division=0,
+        )
+    )
+
+    # 混淆矩阵（直接用字符串 labels，行列顺序与 ALLOWED_DX 一致）
     cm = confusion_matrix(y_true_arr, y_pred_arr, labels=classes)
     print("\n====== 📊 混淆矩阵（rows=true, cols=pred） ======")
     print(classes)
     print(cm)
 
-    fig_cm, ax_cm = plt.subplots(figsize=(6, 5))
-    im = ax_cm.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
-    fig_cm.colorbar(im, ax_cm)
-    ax_cm.set_xticks(range(len(classes)))
-    ax_cm.set_yticks(range(len(classes)))
-    ax_cm.set_xticklabels(classes)
-    ax_cm.set_yticklabels(classes)
+    # 使用 sklearn 自带的 ConfusionMatrixDisplay 来画，避免比例被挤压
+    fig_cm, ax_cm = plt.subplots(figsize=(6, 6))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
+    disp.plot(
+        cmap=plt.cm.Blues,
+        ax=ax_cm,
+        values_format="d",
+        colorbar=True,
+    )
+    ax_cm.set_title("Confusion Matrix (LoRA, 4 classes, linear)")
     ax_cm.set_xlabel("Predicted label")
     ax_cm.set_ylabel("True label")
-    ax_cm.set_title("Confusion Matrix (LoRA, 4 classes, linear)")
-    plt.setp(ax_cm.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-
-    thresh = cm.max() / 2.0 if cm.max() > 0 else 0.5
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax_cm.text(
-                j, i, str(cm[i, j]),
-                ha="center", va="center",
-                color="white" if cm[i, j] > thresh else "black",
-            )
 
     fig_cm.tight_layout()
     cm_path = os.path.join(LORA_PLOTS_DIR, "confusion_matrix_LoRA_linear_4cls.png")
     fig_cm.savefig(cm_path, dpi=300)
     plt.close(fig_cm)
     print(f"📁 混淆矩阵图已保存到: {cm_path}")
+
 
     # ROC & PR（使用 one-hot 预测当作 score 近似）
     y_true_bin = label_binarize(y_true_arr, classes=classes)
