@@ -1,0 +1,27 @@
+Baseline Linear Evaluation (Qwen2.5-VL, 4 classes)
+BASE_MODEL: C://Users//zhangrx59//.cache//huggingface//hub//Qwen2.5-VL-7B-Instruct
+TEST_CSV: C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv
+IMAGE_ROOT_DIR: C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset
+min_pixels=50176, max_pixels=200704
+used=188, missing_image=0, bad_image=0, skipped_bad_label=0
+accuracy=0.191489
+total_sec=527.835, avg_sec=2.807631
+
+              precision    recall  f1-score   support
+
+       akiec     0.1887    0.2381    0.2105        42
+         bcc     0.6000    0.0945    0.1633       127
+         nev     0.1833    1.0000    0.3099        11
+         mel     0.0545    0.3750    0.0952         8
+
+    accuracy                         0.1915       188
+   macro avg     0.2566    0.4269    0.1947       188
+weighted avg     0.4605    0.1915    0.1795       188
+
+
+Confusion matrix (rows=true, cols=pred):
+['akiec', 'bcc', 'nev', 'mel']
+[[10  8 15  9]
+ [42 12 30 43]
+ [ 0  0 11  0]
+ [ 1  0  4  3]]

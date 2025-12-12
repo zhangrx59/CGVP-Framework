@@ -1,0 +1,31 @@
+{
+  "BASE_MODEL": "C://Users//zhangrx59//.cache//huggingface//hub//Qwen2.5-VL-7B-Instruct",
+  "TEST_CSV": "C:\\Users\\zhangrx59\\PycharmProjects\\LoRA\\metadata_test.csv",
+  "IMAGE_ROOT_DIR": "C:\\Users\\zhangrx59\\PycharmProjects\\LoRA\\ISIC_dataset",
+  "IMAGE_EXT": ".png",
+  "CLASSES": [
+    "akiec",
+    "bcc",
+    "nev",
+    "mel"
+  ],
+  "DEVICE": "cuda",
+  "DTYPE": "torch.bfloat16",
+  "USE_MIN_MAX_PIXELS": true,
+  "MIN_PIXELS": 50176,
+  "MAX_PIXELS": 200704,
+  "USE_CLINICAL_NOTE": true,
+  "CLINICAL_NOTE_MAX_CHARS": 600,
+  "ROC_PR_USE_PROBS": true,
+  "SEED": 42,
+  "stats": {
+    "total_rows": 188,
+    "used": 188,
+    "correct": 36,
+    "skipped_bad_label": 0,
+    "missing_image": 0,
+    "bad_image": 0,
+    "seconds_total": 527.8347027301788
+  },
+  "accuracy": 0.19148936170212766
+}
