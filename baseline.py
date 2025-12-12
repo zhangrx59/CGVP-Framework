@@ -26,20 +26,20 @@ from sklearn.preprocessing import label_binarize
 
 # ========== 路径 & 配置（需与微调脚本一致） ==========
 
-BASE_MODEL = "google/medgemma-4b-it"
+BASE_MODEL = r"C://Users//zhangrx59//.cache//huggingface//hub//Qwen2.5-VL-7B-Instruct"
 
 # 原始 metadata CSV
 METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shape.csv"
 
 # 微调脚本中 prepare_splits() 生成的 test CSV
-TEST_CSV = METADATA_CSV.replace(".csv", "_test_5cls.csv")
+TEST_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录（基座模型的结果单独放一个目录）
-PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\baseline"
+PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\baseline2"
 os.makedirs(PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）

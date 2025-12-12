@@ -22,13 +22,15 @@ from sklearn.model_selection import train_test_split
 from datasets import load_dataset
 from transformers import (
     AutoModelForVision2Seq,
+    AutoModelForImageTextToText,
     AutoProcessor,
     TrainingArguments,
+    BitsAndBytesConfig,
     Trainer,
     set_seed,
 )
 
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 # ===================== 0. 基本配置 =====================
 
@@ -441,21 +443,13 @@ class QwenCollator:
         dx_codes = [x["dx_code"] for x in batch]
         cls_labels = torch.tensor([x["cls_label"] for x in batch], dtype=torch.long)
 
-        texts_full: List[str] = []
-        texts_prompt_only: List[str] = []
+        texts_full = []
+        texts_prompt_only = []
 
         tokenizer = self.processor.tokenizer
 
         for clinical, dx in zip(clinical_texts, dx_codes):
-            user_text = (
-                f"{clinical}"
-                "Based on the clinical information and the dermoscopic image, "
-                "predict the most likely diagnosis and answer with only one label code "
-                "from {akiec, bcc, nev, mel}."
-                "Final answer:"
-            )
-
-            # 关键：Qwen2.5-VL 需要“结构化多模态消息”来注入真正的 image placeholder token
+            # system + user + assistant（含答案）
             messages_full = [
                 {
                     "role": "system",
@@ -470,12 +464,20 @@ class QwenCollator:
                     "role": "user",
                     "content": [
                         {"type": "image"},
-                        {"type": "text", "text": user_text},
+                        {"type": "text", "text": (
+                            f"{clinical}"
+                            "Based on the clinical information and the dermoscopic image, "
+                            "predict the most likely diagnosis and answer with only one label code "
+                            "from {akiec, bcc, nev, mel}.\n"
+                            "Final answer:"
+                        )},
                     ],
                 },
-                {"role": "assistant", "content": dx},
+                {
+                    "role": "assistant",
+                    "content": dx,
+                },
             ]
-
             chat_full = self.processor.apply_chat_template(
                 messages_full,
                 add_generation_prompt=False,
@@ -483,16 +485,16 @@ class QwenCollator:
             )
             texts_full.append(chat_full)
 
-            # prompt-only（不含答案），用于构造 label mask
+            # system + user（不含答案，用于找答案起始位置）
             messages_prompt = messages_full[:-1]
             chat_prompt = self.processor.apply_chat_template(
                 messages_prompt,
-                add_generation_prompt=True,
+                add_generation_prompt=True,   # 让 tokenizer 知道 assistant 要开始回答
                 tokenize=False,
             )
             texts_prompt_only.append(chat_prompt)
 
-        # 编码（图像 + 文本）；此时 text 内已包含“图像占位 token”，与 images 一一对应
+        # 编码（图像+文本）
         model_inputs = self.processor(
             text=texts_full,
             images=images,
@@ -504,13 +506,22 @@ class QwenCollator:
         input_ids = model_inputs["input_ids"]
         labels = input_ids.clone()
 
-        # 只在答案 token 上计算 loss：prompt 部分设为 -100
-        # 用 prompt 的 token 长度切分（比“取最后一位”更稳，避免特殊 token 干扰）
+        # 只在答案 token 上计算 loss，其余位置 label = -100
         for i, prompt_text in enumerate(texts_prompt_only):
             prompt_ids = tokenizer(prompt_text, add_special_tokens=False)["input_ids"]
-            ans_start = min(len(prompt_ids), labels.size(1) - 1)
-            labels[i, :ans_start] = -100
+            prompt_len = len(prompt_ids)
 
+            # 一般 Qwen2.5-VL 的 chat_template 会在前面加特殊起始 token
+            # 简单做法：假设 input_ids 前面也有同样结构，
+            # 用 prompt_len 从左往右找到对应位置即可
+            # （保守一点：ans_start = len(input_ids[i]) - 答案长度，但你这答案只有一个 token，很短）
+            prompt_ids = tokenizer(texts_prompt_only[i], add_special_tokens=False)["input_ids"]
+            ans_start = min(len(prompt_ids), labels.size(1) - 1)  # 用 prompt 长度定位答案起点
+            # 如果你想更精确，也可以：ans_start = len(prompt_ids) + 1 之类，视实际模板调整
+
+            labels[i, :ans_start] = -100  # prompt 部分不算 loss
+
+        # pad 部分不算 loss
         pad_id = tokenizer.pad_token_id
         if pad_id is not None:
             labels[labels == pad_id] = -100
@@ -520,28 +531,61 @@ class QwenCollator:
         return model_inputs
 
 
-
 # ===================== 5. 加载 Qwen2.5-VL + LoRA =====================
 
 def load_qwen_model_and_processor():
+    """QLoRA(4bit) 加载 Qwen2.5-VL-7B：在 16GB 显存上训练的关键。"""
     if torch.cuda.is_available():
         supports_bf16 = getattr(torch.cuda, "is_bf16_supported", lambda: False)()
-        dtype = torch.bfloat16 if supports_bf16 else torch.float16
+        compute_dtype = torch.bfloat16 if supports_bf16 else torch.float16
     else:
-        dtype = torch.float32
+        compute_dtype = torch.float32
 
-    print(f"🔧 Loading base model: {BASE_MODEL}, dtype={dtype}")
-    model = AutoModelForVision2Seq.from_pretrained(
-        BASE_MODEL,
-        torch_dtype=dtype,
+    print(f"🔧 Loading base model (QLoRA 4bit): {BASE_MODEL}, compute_dtype={compute_dtype}")
+
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=compute_dtype,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
     )
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
 
-    processor = AutoProcessor.from_pretrained(BASE_MODEL)
-    processor.tokenizer.padding_side = "right"
+    model = AutoModelForImageTextToText.from_pretrained(
+        BASE_MODEL,
+        quantization_config=bnb_config,
+        device_map="auto",
+    )
+    min_pixels = 224 * 224
+    max_pixels = 880 * 880
 
-    # LoRA 配置（可以和你 medgemma 的类似）
+    processor = AutoProcessor.from_pretrained(
+        BASE_MODEL,
+        min_pixels=min_pixels,
+        max_pixels=max_pixels,
+    )
+    # 限制视觉分辨率，减少 image tokens（默认 1849 很容易炸显存）
+    try:
+        processor.image_processor.size = {"shortest_edge": 336}
+    except Exception:
+        pass
+
+    # QLoRA 必做：k-bit 训练准备
+    try:
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
+    except TypeError:
+        model = prepare_model_for_kbit_training(model)
+
+    # gradient checkpointing + 关 cache（否则白开）
+    if hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable()
+    if hasattr(model, "config") and hasattr(model.config, "use_cache"):
+        model.config.use_cache = False
+
+    # 冻结 vision encoder（医学分类任务通常足够，能显著省显存）
+    if hasattr(model, "vision_model"):
+        for p in model.vision_model.parameters():
+            p.requires_grad = False
+
     lora_config = LoraConfig(
         r=8,
         lora_alpha=16,
@@ -551,7 +595,11 @@ def load_qwen_model_and_processor():
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
     )
 
-    model.enable_input_require_grads()
+    try:
+        model.enable_input_require_grads()
+    except Exception:
+        pass
+
     model = get_peft_model(model, lora_config)
 
     total_params = sum(p.numel() for p in model.parameters())

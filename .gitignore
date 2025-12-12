@@ -2,3 +2,6 @@ ISIC_dataset/
 lab2/
 lab3/
 lab4/
+qwen25vl_derm_lora/
+lora_focal/
+baseline2/
