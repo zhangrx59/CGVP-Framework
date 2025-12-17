@@ -68,7 +68,7 @@ DTYPE = torch.bfloat16 if DEVICE == "cuda" else torch.float32
 # 你之前 LoRA/基线速度差很多，常常就是这里不一致导致的
 USE_MIN_MAX_PIXELS = True
 MIN_PIXELS = 224 * 224
-MAX_PIXELS = 448 * 448  # 如仍慢/显存紧张可降到 384*384 或 336*336
+MAX_PIXELS = 1280 * 1280  # 如仍慢/显存紧张可降到 384*384 或 336*336
 
 # 临床文本（如果你的 CSV 有临床字段，可拼接；没有也没关系）
 USE_CLINICAL_NOTE = True

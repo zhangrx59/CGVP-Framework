@@ -49,14 +49,14 @@ TEST_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # LoRA/QLoRA 权重目录（= 你的训练 OUTPUT_DIR）
 # 这里应当包含 adapter_config.json、adapter_model.safetensors，以及 tokenizer/processor 配置（你训练脚本 save_pretrained 的输出）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\qwen25vl_derm_lora"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\qwen25vl_derm_lora2"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"  # 若是 jpg 改为 ".jpg"
 
 # 评估结果保存目录
-EVAL_OUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\qwen_eval_results"
+EVAL_OUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\qwen_eval_results2"
 os.makedirs(EVAL_OUT_DIR, exist_ok=True)
 
 # 列名（与你的 CSV 一致即可）

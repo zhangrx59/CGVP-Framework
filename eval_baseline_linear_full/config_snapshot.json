@@ -13,7 +13,7 @@
   "DTYPE": "torch.bfloat16",
   "USE_MIN_MAX_PIXELS": true,
   "MIN_PIXELS": 50176,
-  "MAX_PIXELS": 200704,
+  "MAX_PIXELS": 1638400,
   "USE_CLINICAL_NOTE": true,
   "CLINICAL_NOTE_MAX_CHARS": 600,
   "ROC_PR_USE_PROBS": true,
@@ -21,11 +21,11 @@
   "stats": {
     "total_rows": 188,
     "used": 188,
-    "correct": 36,
+    "correct": 39,
     "skipped_bad_label": 0,
     "missing_image": 0,
     "bad_image": 0,
-    "seconds_total": 527.8347027301788
+    "seconds_total": 8075.585819005966
   },
-  "accuracy": 0.19148936170212766
+  "accuracy": 0.2074468085106383
 }

@@ -54,7 +54,7 @@ USE_RESNET_PRIOR = True
 RESNET_CKPT = r"C:\Users\zhangrx59\PycharmProjects\LoRA\best_resnet50_custom_cbam_focal.pth"
 
 # LoRA 输出目录
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\qwen25vl_derm_lora"
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\qwen25vl_derm_lora2"
 
 # 标签相关
 COL_IMAGE_ID = "image_id"
@@ -556,7 +556,7 @@ def load_qwen_model_and_processor():
         device_map="auto",
     )
     min_pixels = 224 * 224
-    max_pixels = 880 * 880
+    max_pixels = 1280 * 1280
 
     processor = AutoProcessor.from_pretrained(
         BASE_MODEL,
