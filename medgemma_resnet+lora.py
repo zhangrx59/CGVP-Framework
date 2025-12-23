@@ -44,7 +44,7 @@ VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
 TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # 🔴 ResNet 视觉模块 pth 路径（你训练好的那个）
-RESNET_CKPT = r"C:\Users\zhangrx59\PycharmProjects\LoRA\best_resnet50_custom_cbam_focal.pth"
+RESNET_CKPT = r"C:\Users\zhangrx59\PycharmProjects\LoRA\vision_model\best_resnet50_custom_cbam_focal.pth"
 
 COL_IMAGE_ID    = "image_id"
 COL_AGE         = "年龄"
@@ -78,10 +78,15 @@ ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]  # 固定顺序，后面要用 index
 # 建议：先用 False 训练一版「不带 ResNet 先验」做对照，如果需要再改 True
 USE_RESNET_PRIOR = False
 # 只有当 ResNet 对 top 类的概率 ≥ 该阈值时，才认为是“相对可信”的先验
-RESNET_CONF_THRESH = 0.7
+RESNET_CONF_THRESH = 0.9
 
+
+# ===== ResNet KL consistency (Scheme B) =====
+# Whether to add KL(p_llm || p_resnet) on 4-class distribution (only when ResNet is confident)
+USE_RESNET_KL = True
+RESNET_KL_WEIGHT = 0.05
 # LoRA 微调输出目录
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5"
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab6"
 
 
 # ===================== 0.1 ResNet+CBAM 定义（用于推理） =====================
@@ -395,36 +400,45 @@ class DermMetadataDataset(TorchDataset):
         self.resnet_device = resnet_device
 
         # 缓存每个 image_id 的先验结果，确保“一张图只过一次 ResNet”
-        self._prior_cache: Dict[str, str] = {}
+        self._prior_cache: Dict[str, Tuple[str, np.ndarray]] = {}  # image_id -> (prior_text, probs4)
 
     def __len__(self):
         return len(self.df)
 
-    def _get_resnet_prior_text(self, image_id: str, pil_image: Image.Image) -> str:
-        """对单张图像做一次 ResNet 推理，输出英文先验描述，并做缓存。"""
+    def _get_resnet_prior(self, image_id: str, pil_image: Image.Image) -> Tuple[str, np.ndarray]:
+
         if image_id in self._prior_cache:
             return self._prior_cache[image_id]
 
+        # 默认：均匀分布
+        probs4 = np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float32)
+
         if self.resnet_model is None:
             prior = "ResNet prior not available."
-            self._prior_cache[image_id] = prior
-            return prior
+            self._prior_cache[image_id] = (prior, probs4)
+            return prior, probs4
 
         x = self.resnet_transform(pil_image).unsqueeze(0).to(self.resnet_device)
 
         with torch.no_grad():
             logits = self.resnet_model(x)
-            probs = F.softmax(logits, dim=1).cpu().numpy()[0]
+            probs = F.softmax(logits, dim=1).cpu().numpy()[0]  # (C,)
 
-        top_idx = int(np.argmax(probs))
-        top_label = self.resnet_dx_categories[top_idx]
-        top_prob = float(probs[top_idx])
+        # 将 ResNet 的类别顺序映射到 ALLOWED_DX 顺序（只取这 4 类）
+        cls2p = {cls: float(p) for cls, p in zip(self.resnet_dx_categories, probs)}
+        probs4 = np.array([cls2p.get(cls, 0.0) for cls in ALLOWED_DX], dtype=np.float32)
+        s = float(probs4.sum())
+        if s > 0:
+            probs4 = probs4 / s
+        else:
+            probs4 = np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float32)
 
-        # 收集完整概率分布（可选）
-        parts = []
-        for cls, p in zip(self.resnet_dx_categories, probs):
-            parts.append(f"{cls}={p:.3f}")
-        dist_str = ", ".join(parts)
+        top_idx = int(np.argmax(probs4))
+        top_label = ALLOWED_DX[top_idx]
+        top_prob = float(probs4[top_idx])
+
+        # 收集完整概率分布（只展示 4 类，避免混乱）
+        dist_str = ", ".join([f"{cls}={p:.3f}" for cls, p in zip(ALLOWED_DX, probs4)])
 
         # === 置信度门控：高置信度才给明确“建议”，低置信度则标记为不可靠 ===
         if top_prob >= RESNET_CONF_THRESH:
@@ -432,7 +446,7 @@ class DermMetadataDataset(TorchDataset):
                 f"The independent ResNet image classifier is relatively confident "
                 f"and suggests the lesion might be '{top_label}' "
                 f"(approximate probability {top_prob:.3f}). "
-                f"Full probability distribution: {dist_str}."
+                f"Full probability distribution (4-class): {dist_str}."
             )
         else:
             prior_text = (
@@ -441,8 +455,9 @@ class DermMetadataDataset(TorchDataset):
                 f"{dist_str}."
             )
 
-        self._prior_cache[image_id] = prior_text
-        return prior_text
+        self._prior_cache[image_id] = (prior_text, probs4)
+        return prior_text, probs4
+
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
@@ -463,7 +478,7 @@ class DermMetadataDataset(TorchDataset):
         cls_label_idx = ALLOWED_DX.index(label)  # 0~3
 
         # 🔴 ResNet 视觉先验文本（已经做了置信度门控）
-        resnet_prior = self._get_resnet_prior_text(image_id, image)
+        resnet_prior, resnet_probs4 = self._get_resnet_prior(image_id, image)
 
         # 随机打乱 label 展示顺序，避免位置偏置
         label_list = ALLOWED_DX.copy()
@@ -540,6 +555,7 @@ class DermMetadataDataset(TorchDataset):
             "image": image,
             "target_text": target_text,
             "cls_label_idx": cls_label_idx,
+            "resnet_probs": resnet_probs4,  # (4,) aligned to ALLOWED_DX
         }
 
 
@@ -554,6 +570,7 @@ class MedGemmaCollator:
         messages_list = [eg["messages"] for eg in batch]
         targets = [eg["target_text"] for eg in batch]
         cls_labels = [eg["cls_label_idx"] for eg in batch]
+        resnet_probs = [eg.get("resnet_probs", np.array([0.25,0.25,0.25,0.25], dtype=np.float32)) for eg in batch]
 
         texts = []
         prompt_texts = []
@@ -602,6 +619,7 @@ class MedGemmaCollator:
         model_inputs["labels"] = labels
         # 新增：4 类分类标签（0~3），供 Trainer 使用
         model_inputs["cls_labels"] = torch.tensor(cls_labels, dtype=torch.long)
+        model_inputs["resnet_probs"] = torch.tensor(np.stack(resnet_probs, axis=0), dtype=torch.float32)
 
         return model_inputs
 
@@ -693,8 +711,10 @@ class Softmax5Trainer(Trainer):
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         # 兼容 Trainer 额外参数
-        labels = inputs.pop("labels")        # (B, T)
+        labels = inputs.pop("labels")          # (B, T)
         cls_labels = inputs.pop("cls_labels")  # (B,)
+        resnet_probs = inputs.pop("resnet_probs", None)  # (B, 4) or None
+
         outputs = model(**inputs)
         logits = outputs.logits  # (B, T, V)
 
@@ -710,20 +730,39 @@ class Softmax5Trainer(Trainer):
         logits_first = logits[batch_idx, first_pos, :]  # (B, V)
 
         # 只保留 N 个 label token 的 logits，得到 (B, N)
-        logits_n = logits_first[:, label_token_ids]
+        logits_n = logits_first[:, label_token_ids]  # (B, 4)
 
         # 把权重搬到和 logits 同一个 device 上
         weight = None
         if self.class_weights is not None:
             weight = self.class_weights.to(device)
 
-        # 这里直接用 functional.cross_entropy，避免 ce_loss 本身绑死在 CPU
-        loss = F.cross_entropy(
+        # 主分类损失（4 类 softmax）
+        ce_loss = F.cross_entropy(
             logits_n,
             cls_labels.to(device),
             weight=weight,
-            label_smoothing=0.1,
+            label_smoothing=0.0,
         )
+
+        # Scheme B: ResNet KL consistency（只在 ResNet 高置信样本上启用）
+        kl_loss = torch.tensor(0.0, device=device)
+        if USE_RESNET_KL and (RESNET_KL_WEIGHT > 0) and (resnet_probs is not None):
+            resnet_probs = resnet_probs.to(device)
+            # 归一化（防止数值问题）
+            resnet_probs = resnet_probs / (resnet_probs.sum(dim=-1, keepdim=True) + 1e-8)
+
+            llm_probs = F.softmax(logits_n, dim=-1)
+            resnet_probs = resnet_probs / (resnet_probs.sum(dim=-1, keepdim=True) + 1e-8)
+
+            resnet_conf, _ = resnet_probs.max(dim=-1)  # (B,)
+            mask_conf = (resnet_conf > RESNET_CONF_THRESH).float().unsqueeze(-1)  # (B,1)
+            kl = F.kl_div(resnet_probs.log(), llm_probs, reduction="none")  # 这才是 KL(p_llm || p_resnet)
+            kl_loss = (kl * mask_conf).sum(dim=-1)  # 每样本一个 kl
+            kl_loss = (kl_loss * mask_conf.squeeze(-1)).sum() / (mask_conf.squeeze(-1).sum() + 1e-8)
+
+
+        loss = ce_loss + RESNET_KL_WEIGHT * kl_loss
 
         if return_outputs:
             return loss, outputs

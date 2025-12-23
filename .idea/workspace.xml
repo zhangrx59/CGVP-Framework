@@ -5,19 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="298a7252-b432-4b2d-86ef-9ba37e173337" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/docs/akiec.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/bcc.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/differential.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/mel.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/docs/nev.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evaluate_medgemma+rag.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_medgamma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_medgamma2.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma+reasoning.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_qwen.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_qwen.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab5_results/confusion_matrix_LoRA_linear_4cls.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab5_results/confusion_matrix_LoRA_linear_4cls.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/medgamma_lora.py" beforeDir="false" afterPath="$PROJECT_DIR$/medgamma_lora.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_medgemma+rag.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma+rag.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_medgemma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab5_results/pr_curve_LoRA_linear_4cls.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab5_results/roc_curve_LoRA_linear_4cls.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/medgemma_resnet+lora.py" beforeDir="false" afterPath="$PROJECT_DIR$/medgemma_resnet+lora.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vision_model/evaluate_resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/vision_model/evaluate_resnet.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,10 +64,12 @@
     "Python.dataset_split.executor": "Run",
     "Python.evaluate_medgamma.executor": "Run",
     "Python.evaluate_medgamma2.executor": "Run",
+    "Python.evaluate_medgemma+rag.executor": "Run",
     "Python.evaluate_resnet.executor": "Run",
     "Python.generate_dataset.executor": "Run",
     "Python.inference_medgamma_lora_treatment.executor": "Run",
     "Python.medgamma.executor": "Run",
+    "Python.medgemma_resnet+lora.executor": "Run",
     "Python.qwen_lora.executor": "Run",
     "Python.server.executor": "Run",
     "Python.test.executor": "Run",

@@ -40,7 +40,7 @@ from sklearn.preprocessing import label_binarize
 TEST_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # 图片根目录（和训练脚本保持一致）
-IMAGE_ROOT_DIR = r"/ISIC_dataset"
+IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 
 # 会依次尝试的图片后缀（和训练脚本保持一致）
 IMAGE_EXT_CANDIDATES = [".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"]

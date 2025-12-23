@@ -415,6 +415,7 @@ def evaluate_lora_linear():
 
 
     y_true, y_pred = [], []
+    y_score_probs = []  # FIX: store softmax probs for ROC/PR
     total, correct = 0, 0
     missing_image = 0
 
@@ -506,7 +507,7 @@ def evaluate_lora_linear():
 
         prompt_text = processor.apply_chat_template(
             messages,
-            add_generation_prompt=True,
+            add_generation_prompt=False,
             tokenize=False,
         )
 
@@ -527,6 +528,7 @@ def evaluate_lora_linear():
 
         # === ② mel 阈值处理：如果 mel 概率不够高，则压一压 mel 再选一次 ===
         probs_4 = torch.softmax(logits_4, dim=-1)
+        y_score_probs.append(probs_4.detach().cpu().numpy())  # FIX
         pred_idx = int(torch.argmax(probs_4).item())
 
         if pred_idx == mel_idx and probs_4[mel_idx] < mel_thresh:
@@ -607,6 +609,7 @@ def evaluate_lora_linear():
 
     # ROC & PR（使用 one-hot 预测当作 score 近似）
     y_true_bin = label_binarize(y_true_arr, classes=classes)
+    y_score_probs = np.vstack(y_score_probs)  # FIX: (N, C) softmax probabilities
     scores = np.zeros_like(y_true_bin, dtype=float)
     for i, pred in enumerate(y_pred_arr):
         if pred in classes:
@@ -617,7 +620,7 @@ def evaluate_lora_linear():
     fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
     for idx, cls in enumerate(classes):
         try:
-            fpr, tpr, _ = roc_curve(y_true_bin[:, idx], scores[:, idx])
+            fpr, tpr, _ = roc_curve(y_true_bin[:, idx], y_score_probs[:, idx])
             roc_auc = auc(fpr, tpr)
             ax_roc.plot(fpr, tpr, label=f"{cls} (AUC={roc_auc:.2f})")
         except ValueError:
@@ -641,9 +644,9 @@ def evaluate_lora_linear():
     for idx, cls in enumerate(classes):
         try:
             precision, recall, _ = precision_recall_curve(
-                y_true_bin[:, idx], scores[:, idx]
+                y_true_bin[:, idx], y_score_probs[:, idx]
             )
-            ap = average_precision_score(y_true_bin[:, idx], scores[:, idx])
+            ap = average_precision_score(y_true_bin[:, idx], y_score_probs[:, idx])
             ax_pr.plot(recall, precision, label=f"{cls} (AP={ap:.2f})")
         except ValueError:
             continue
