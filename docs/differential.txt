@@ -1,0 +1,16 @@
+Differentiating melanoma from benign nevus is a critical task in dermatology.
+
+Melanoma is more likely when lesions show:
+- Asymmetry
+- Irregular borders
+- Color variegation
+- Rapid change
+
+Benign nevi usually present:
+- Symmetric shape
+- Uniform color
+- Stable appearance
+
+Basal cell carcinoma often presents as pearly papules with arborizing vessels, while actinic keratosis typically appears as rough, scaly lesions on sun-exposed skin.
+
+

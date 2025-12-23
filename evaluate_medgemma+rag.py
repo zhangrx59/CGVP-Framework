@@ -1,4 +1,4 @@
-# evaluate_medgamma.py
+# evaluate_medgemma.py
 # -*- coding: utf-8 -*-
 
 import os
@@ -25,6 +25,8 @@ from sklearn.metrics import(
 )
 
 from sklearn.preprocessing import label_binarize
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 
 
 # ========== 路径 & 配置（需与微调脚本一致） ==========
@@ -45,7 +47,7 @@ IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录
-LORA_PLOTS_DIR = r"/lab5_results"
+LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5_results"
 os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）
@@ -79,6 +81,22 @@ COL_TARGET      = "dx"
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
 
 
+ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
+
+
+
+# ========== RAG（可选）：在评估时检索外部知识，最小化改动 ==========
+# 说明：
+# - 这是“评估阶段 RAG”，不会改变你 LoRA 的训练过程，只是在推理 prompt 里追加检索到的医学知识片段。
+# - 你只需要把指南/知识库放到 RAG_DOCS_DIR（txt/md 等纯文本），脚本会自动索引、按 query 检索 topK 片段。
+# - 不想用 RAG：把 RAG_ENABLE=False 即可，其他评估流程完全不变。
+
+RAG_ENABLE = True
+RAG_DOCS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\docs"  # 你放指南/知识的文件夹（txt/md）
+RAG_TOP_K = 3              # 检索返回多少段
+RAG_MAX_CHARS_PER_CHUNK = 900   # 每段最长字符（太长会吃 context & 显存）
+RAG_MIN_CHARS_PER_CHUNK = 200   # 太短的片段通常噪声大
+RAG_MAX_TOTAL_CONTEXT_CHARS = 2400  # 拼接到 prompt 的总长度上限（避免 prompt 过长）
 # ========== 一些工具函数（和微调脚本保持一致） ==========
 
 def yn_str(v, yes: str, no: str, unk: str = "unknown") -> str:
@@ -210,6 +228,126 @@ def extract_dx_code(text: str) -> str:
     return code if code in ALLOWED_DX else "unknown"
 
 
+# ========== RAG 索引与检索（最小实现：TF-IDF） ==========
+
+def _read_text_file_safe(path: str) -> str:
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except UnicodeDecodeError:
+        try:
+            with open(path, "r", encoding="gbk") as f:
+                return f.read()
+        except Exception:
+            return ""
+    except Exception:
+        return ""
+
+
+def _chunk_text(text: str, max_chars: int, min_chars: int) -> list:
+    """把长文本切成若干段（按空行/句号/长度近似切），用于检索。"""
+    if not text:
+        return []
+    # 先按空行分段
+    paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    chunks = []
+    buf = ""
+    for p in paras:
+        if len(buf) + len(p) + 1 <= max_chars:
+            buf = (buf + "\n" + p).strip()
+        else:
+            if len(buf) >= min_chars:
+                chunks.append(buf)
+            # p 本身很长则硬切
+            if len(p) > max_chars:
+                for i in range(0, len(p), max_chars):
+                    piece = p[i : i + max_chars].strip()
+                    if len(piece) >= min_chars:
+                        chunks.append(piece)
+                buf = ""
+            else:
+                buf = p
+    if len(buf) >= min_chars:
+        chunks.append(buf)
+    return chunks
+
+
+def build_rag_index(docs_dir: str):
+    """构建一个简单 TF-IDF 索引：返回 (vectorizer, doc_matrix, chunks, sources)。"""
+    if not docs_dir or (not os.path.isdir(docs_dir)):
+        print(f"⚠ RAG_DOCS_DIR 不存在或不是文件夹：{docs_dir}，将不启用 RAG。")
+        return None
+
+    paths = []
+    for ext in ("*.txt", "*.md", "*.markdown"):
+        paths.extend([os.path.join(docs_dir, p) for p in os.listdir(docs_dir) if p.lower().endswith(ext[1:])])
+
+    # 更稳妥：用 os.walk 递归
+    if not paths:
+        for root, _, files in os.walk(docs_dir):
+            for fn in files:
+                lfn = fn.lower()
+                if lfn.endswith((".txt", ".md", ".markdown")):
+                    paths.append(os.path.join(root, fn))
+
+    if not paths:
+        print(f"⚠ RAG_DOCS_DIR 里没有可索引的 txt/md 文件：{docs_dir}，将不启用 RAG。")
+        return None
+
+    all_chunks, all_sources = [], []
+    for p in sorted(set(paths)):
+        raw = _read_text_file_safe(p)
+        if not raw:
+            continue
+        chunks = _chunk_text(raw, max_chars=RAG_MAX_CHARS_PER_CHUNK, min_chars=RAG_MIN_CHARS_PER_CHUNK)
+        for c in chunks:
+            all_chunks.append(c)
+            all_sources.append(os.path.basename(p))
+
+    if not all_chunks:
+        print("⚠ RAG 索引为空（文件可读但没切出有效 chunk），将不启用 RAG。")
+        return None
+
+    vectorizer = TfidfVectorizer(stop_words="english", max_features=50000)
+    doc_matrix = vectorizer.fit_transform(all_chunks)
+    print(f"🔎 RAG 索引已构建：docs={len(set(all_sources))}，chunks={len(all_chunks)}")
+    return (vectorizer, doc_matrix, all_chunks, all_sources)
+
+
+def retrieve_rag_context(query: str, rag_index, top_k: int = 3, max_total_chars: int = 2400) -> str:
+    """给定 query（clinical note 等），检索 topK 片段并拼接到 prompt。"""
+    if (not rag_index) or (not query) or (not query.strip()):
+        return ""
+    vectorizer, doc_matrix, chunks, sources = rag_index
+    qv = vectorizer.transform([query])
+    # 余弦相似度：TF-IDF 默认 L2 正则化，点积即可
+    scores = (doc_matrix @ qv.T).toarray().reshape(-1)
+    if scores.size == 0:
+        return ""
+    top_idx = scores.argsort()[::-1][:max(1, top_k)]
+    parts = []
+    total = 0
+    for i in top_idx:
+        if scores[i] <= 0:
+            continue
+        piece = chunks[i].strip()
+        if not piece:
+            continue
+        header = f"[Source: {sources[i]} | score={scores[i]:.3f}]"
+        block = header + "\n" + piece
+        if total + len(block) > max_total_chars:
+            # 截断到剩余空间
+            remain = max_total_chars - total
+            if remain > 200:
+                block = block[:remain]
+                parts.append(block)
+            break
+        parts.append(block)
+        total += len(block) + 2
+    return "\n\n".join(parts)
+
+
+
 # ========== 设备与 LoRA 模型加载 ==========
 
 def get_device():
@@ -270,8 +408,13 @@ def evaluate_lora_linear():
 
     model, processor, device = load_lora_model_and_processor()
 
+    # === 可选：构建 RAG 索引（只做一次） ===
+    rag_index = None
+    if RAG_ENABLE:
+        rag_index = build_rag_index(RAG_DOCS_DIR)
+
+
     y_true, y_pred = [], []
-    y_score_probs = []  # 每个样本的4类概率，用于画ROC/PR曲线
     total, correct = 0, 0
     missing_image = 0
 
@@ -310,6 +453,19 @@ def evaluate_lora_linear():
 
         clinical_note = build_clinical_note(row)
 
+        # === 可选：RAG 检索（把外部知识拼到 prompt 前）===
+        rag_context = ""
+        if rag_index is not None:
+            # query 用临床信息 +（可选）区域等
+            rag_query = clinical_note
+            rag_context = retrieve_rag_context(
+                rag_query,
+                rag_index,
+                top_k=RAG_TOP_K,
+                max_total_chars=RAG_MAX_TOTAL_CONTEXT_CHARS,
+            )
+
+
         # prompt：和训练时保持一致，末尾有 "Final answer:"
         messages = [
             {
@@ -335,11 +491,12 @@ def evaluate_lora_linear():
                         "type": "text",
                         "text": (
                             f"Clinical note:\n{clinical_note}\n\n"
-                            "Based on the clinical note and the provided skin lesion image, "
-                            "predict the most likely disease class.\n"
-                            "Answer with only one class name:\n"
-                            "akiec, bcc, nev, mel.\n"
-                            "Final answer:"
+                             + (f"Retrieved medical knowledge (for reference):\n{rag_context}\n\n" if rag_context else "")
+                             + "Based on the clinical note and the provided skin lesion image, "
+                             + "predict the most likely disease class.\n"
+                             + "Answer with only one class name:\n"
+                             + "akiec, bcc, nev, mel.\n"
+                             + "Final answer:"
                         ),
                     },
                     {"type": "image", "image": image},
@@ -380,9 +537,6 @@ def evaluate_lora_linear():
             pred_idx = int(torch.argmax(probs_4).item())
 
         pred_label = ALLOWED_DX[pred_idx]
-
-        # 保存最终用于决策的4类概率（顺序与 ALLOWED_DX 一致）
-        y_score_probs.append(probs_4.detach().float().cpu().numpy())
 
         total += 1
         if pred_label == label_raw:
@@ -450,15 +604,14 @@ def evaluate_lora_linear():
     plt.close(fig_cm)
     print(f"📁 混淆矩阵图已保存到: {cm_path}")
 
-    # ROC & PR（使用每个样本的4类概率作为 score；比 one-hot 预测更合理）
-    y_true_bin = label_binarize(y_true_arr, classes=classes)
 
-    # y_score_probs: list[np.ndarray]，每个元素 shape=(4,)
-    if len(y_score_probs) != len(y_true_arr):
-        raise RuntimeError(
-            f"y_score_probs 数量({len(y_score_probs)})与样本数({len(y_true_arr)})不一致，无法绘制 ROC/PR 曲线"
-        )
-    scores = np.vstack(y_score_probs).astype(float)  # shape (N, 4)
+    # ROC & PR（使用 one-hot 预测当作 score 近似）
+    y_true_bin = label_binarize(y_true_arr, classes=classes)
+    scores = np.zeros_like(y_true_bin, dtype=float)
+    for i, pred in enumerate(y_pred_arr):
+        if pred in classes:
+            j = classes.index(pred)
+            scores[i, j] = 1.0
 
     # ROC
     fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
@@ -475,10 +628,10 @@ def evaluate_lora_linear():
     ax_roc.set_ylim([0.0, 1.05])
     ax_roc.set_xlabel("False Positive Rate")
     ax_roc.set_ylabel("True Positive Rate")
-    ax_roc.set_title("ROC Curves (LoRA, 4 classes, probability scores, linear)")
+    ax_roc.set_title("ROC Curves (LoRA, 4 classes, pseudo-scores, linear)")
     ax_roc.legend(loc="lower right", fontsize=8)
     fig_roc.tight_layout()
-    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_prob_linear_4cls.png")
+    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_linear_4cls.png")
     fig_roc.savefig(roc_path, dpi=300)
     plt.close(fig_roc)
     print(f"📁 ROC 曲线图已保存到: {roc_path}")
@@ -499,10 +652,10 @@ def evaluate_lora_linear():
     ax_pr.set_ylim([0.0, 1.05])
     ax_pr.set_xlabel("Recall")
     ax_pr.set_ylabel("Precision")
-    ax_pr.set_title("Precision-Recall Curves (LoRA, 4 classes, probability scores, linear)")
+    ax_pr.set_title("Precision-Recall Curves (LoRA, 4 classes, pseudo-scores, linear)")
     ax_pr.legend(loc="lower left", fontsize=8)
     fig_pr.tight_layout()
-    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_prob_linear_4cls.png")
+    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_linear_4cls.png")
     fig_pr.savefig(pr_path, dpi=300)
     plt.close(fig_pr)
     print(f"📁 P-R 曲线图已保存到: {pr_path}")

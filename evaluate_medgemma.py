@@ -1,19 +1,8 @@
-# evaluate_medgamma_reasoning.py
+# evaluate_medgemma.py
 # -*- coding: utf-8 -*-
-"""
-在原 evaluate_medgamma.py（4分类，无 bkl）的基础上做“最小侵入”的增强：
-- 评估指标/混淆矩阵/ROC/PR：仍然使用你原来的“线性推理（取 final logits -> 4 个 label token）”逻辑，保证可复现。
-- 额外输出：对每个样本再调用一次 generate()，生成“推理依据 + 治疗建议（含用药方向）”。
-
-重要说明（医疗安全）：
-本脚本生成的“治疗/用药建议”仅做技术演示与信息整理，不构成医疗处方或个体化治疗方案；
-临床决策必须由有资质的医生结合病史、体检、皮肤镜/病理等结果给出。
-"""
 
 import os
 import re
-import json
-import argparse
 import warnings
 
 import torch
@@ -25,15 +14,16 @@ import matplotlib.pyplot as plt
 from transformers import AutoModelForImageTextToText, AutoProcessor, set_seed
 from peft import PeftModel
 
-from sklearn.metrics import (
+from sklearn.metrics import(
     classification_report,
     confusion_matrix,
     roc_curve,
     auc,
     precision_recall_curve,
     average_precision_score,
-    ConfusionMatrixDisplay,
+    ConfusionMatrixDisplay,   # ★ 新增
 )
+
 from sklearn.preprocessing import label_binarize
 
 
@@ -45,49 +35,45 @@ BASE_MODEL = "google/medgemma-4b-it"
 METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shape.csv"
 
 # 微调脚本中 prepare_splits() 生成的 test CSV
-TEST_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
+TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # LoRA 权重所在目录（要和微调脚本里的 OUTPUT_DIR 一致）
 LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
-IMAGE_EXT = ".png"  # 如果是 .jpg 改成 ".jpg"
+IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录
-LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5_results"
+LORA_PLOTS_DIR = r"/lab5_results"
 os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
-# 额外：逐样本推理输出保存目录
-LORA_TEXT_DIR = os.path.join(LORA_PLOTS_DIR, "reasoning_outputs")
-os.makedirs(LORA_TEXT_DIR, exist_ok=True)
-
 # 列名（与微调脚本保持一致）
-COL_IMAGE_ID = "image_id"
-COL_AGE = "年龄"
-COL_SEX = "性别"
-COL_FATHER_ORI = "父籍贯"
-COL_MOTHER_ORI = "母籍贯"
-COL_BIOPSY = "是否活检"
-COL_SMOKE = "是否吸烟"
-COL_DRINK = "是否饮酒"
-COL_PESTICIDE = "农药"
+COL_IMAGE_ID    = "image_id"
+COL_AGE         = "年龄"
+COL_SEX         = "性别"
+COL_FATHER_ORI  = "父籍贯"
+COL_MOTHER_ORI  = "母籍贯"
+COL_BIOPSY      = "是否活检"
+COL_SMOKE       = "是否吸烟"
+COL_DRINK       = "是否饮酒"
+COL_PESTICIDE   = "农药"
 COL_SKIN_CANCER = "皮肤癌病史"
-COL_OTHER_CA = "癌症病史"
-COL_TAP_WATER = "生活环境是否有自来水"
-COL_SEWER = "生活环境是否有下水道"
-COL_PHOTOTYPE = "皮肤光型"
-COL_REGION = "区域"
-COL_D1 = "直径1"
-COL_D2 = "直径2"
-COL_PRURITUS = "瘙痒"
-COL_GROWTH = "是否长大"
-COL_PAIN = "疼痛"
-COL_MORPH_CHANGE = "形态变化"
-COL_BLEEDING = "出血"
-COL_ELEVATED = "是否隆起"
+COL_OTHER_CA    = "癌症病史"
+COL_TAP_WATER   = "生活环境是否有自来水"
+COL_SEWER       = "生活环境是否有下水道"
+COL_PHOTOTYPE   = "皮肤光型"
+COL_REGION      = "区域"
+COL_D1          = "直径1"
+COL_D2          = "直径2"
+COL_PRURITUS    = "瘙痒"
+COL_GROWTH      = "是否长大"
+COL_PAIN        = "疼痛"
+COL_MORPH_CHANGE= "形态变化"
+COL_BLEEDING    = "出血"
+COL_ELEVATED    = "是否隆起"
 
-COL_TARGET = "dx"
+COL_TARGET      = "dx"
 
 # 现在只评估这 4 类（注意顺序必须固定）
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
@@ -96,7 +82,9 @@ ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
 # ========== 一些工具函数（和微调脚本保持一致） ==========
 
 def yn_str(v, yes: str, no: str, unk: str = "unknown") -> str:
-    """把各种 True/False/空/NaN 归一化成 yes/no/unk"""
+    """
+    把各种 True/False/空/NaN 归一化成 yes/no/unk
+    """
     if isinstance(v, str):
         vs = v.strip().upper()
         if vs in ["TRUE", "T", "YES", "Y", "1"]:
@@ -113,7 +101,9 @@ def yn_str(v, yes: str, no: str, unk: str = "unknown") -> str:
 
 
 def build_clinical_note(row: pd.Series) -> str:
-    """与训练脚本中的英文病历构造逻辑保持一致"""
+    """
+    与训练脚本中的英文病历构造逻辑保持一致
+    """
     age = row.get(COL_AGE, "")
     sex_raw = str(row.get(COL_SEX, "") or "").strip().lower()
     region = str(row.get(COL_REGION, "") or "").strip()
@@ -206,7 +196,9 @@ def normalize_dx(label: str) -> str:
 
 
 def extract_dx_code(text: str) -> str:
-    """从模型输出文本中提取 4 类 dx code（备用函数）"""
+    """
+    从模型输出文本中提取 4 类 dx code（备用函数）
+    """
     if not isinstance(text, str):
         return "unknown"
     text_lower = text.lower()
@@ -256,96 +248,9 @@ def load_lora_model_and_processor():
     return model, processor, device
 
 
-# ========== 新增：生成“依据 + 治疗建议”的推理文本 ==========
+# ========== 逐样本线性推理评估 Test 集（直接看 final logits） ==========
 
-def build_reasoning_prompt(clinical_note: str) -> list:
-    """
-    生成专用于“解释 + 治疗建议”的对话 messages。
-    注意：这里不要求模型输出仅一个类别了，而是输出中文结构化内容。
-    """
-    sys_text = (
-        "你是一名皮肤科辅助医生（仅做信息整理与科普，不替代临床医生）。"
-        "你会根据病历摘要与皮损图像给出：\n"
-        "1) 诊断分类（必须是以下四类之一：akiec, bcc, nev, mel）\n"
-        "2) 你的判断依据（列出图像/病史可能支持该分类的关键点）\n"
-        "3) 下一步检查建议\n"
-        "4) 治疗建议（可以给出常见用药/治疗方向，但不要给剂量与处方；强调需医生评估）\n\n"
-        "输出格式必须严格为：\n"
-        "诊断分类: <class>\n"
-        "依据:\n- ...\n"
-        "检查建议:\n- ...\n"
-        "治疗建议:\n- ...\n"
-        "风险提示:\n- ...\n"
-    )
-
-    user_text = (
-        f"病历摘要:\n{clinical_note}\n\n"
-        "请结合图像与病历，按要求输出。"
-        "再次强调：不要给出具体剂量、疗程或处方；只给常见治疗方向，并提示就医。"
-    )
-
-    messages = [
-        {"role": "system", "content": [{"type": "text", "text": sys_text}]},
-        {"role": "user", "content": [{"type": "text", "text": user_text}, {"type": "image"}]},
-    ]
-    return messages
-
-
-@torch.no_grad()
-def generate_reasoning_and_plan(
-    model,
-    processor,
-    device,
-    image: Image.Image,
-    clinical_note: str,
-    max_new_tokens: int = 256,
-    temperature: float = 0.2,
-    top_p: float = 0.9,
-) -> str:
-    """
-    额外跑一次 generate() 输出“原因 + 治疗建议”。
-    这一步不参与指标计算，仅用于可解释性展示/案例分析。
-    """
-    messages = build_reasoning_prompt(clinical_note)
-    prompt_text = processor.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=False,
-    )
-
-    inputs = processor(
-        text=[prompt_text],
-        images=[image],
-        return_tensors="pt",
-    ).to(device)
-
-    gen_ids = model.generate(
-        **inputs,
-        max_new_tokens=max_new_tokens,
-        do_sample=(temperature > 0),
-        temperature=temperature,
-        top_p=top_p,
-        eos_token_id=processor.tokenizer.eos_token_id,
-        pad_token_id=processor.tokenizer.eos_token_id,
-    )
-
-    out_text = processor.tokenizer.decode(gen_ids[0], skip_special_tokens=True)
-    # 尝试只截取 assistant 的最后输出（保守处理：找最后一次出现“诊断分类:”）
-    idx = out_text.rfind("诊断分类")
-    if idx != -1:
-        out_text = out_text[idx:].strip()
-    return out_text
-
-
-# ========== 逐样本线性推理评估 Test 集（直接看 final logits） +（可选）生成解释/治疗建议 ==========
-
-def evaluate_lora_linear(
-    do_generate_reasoning: bool = True,
-    reasoning_max_new_tokens: int = 256,
-    reasoning_temperature: float = 0.2,
-    reasoning_top_p: float = 0.9,
-    save_reasoning_jsonl: bool = True,
-):
+def evaluate_lora_linear():
     if not os.path.exists(TEST_CSV):
         raise FileNotFoundError(
             f"未找到测试集 CSV: {TEST_CSV}\n"
@@ -366,6 +271,7 @@ def evaluate_lora_linear(
     model, processor, device = load_lora_model_and_processor()
 
     y_true, y_pred = [], []
+    y_score_probs = []  # 每个样本的4类概率，用于画ROC/PR曲线
     total, correct = 0, 0
     missing_image = 0
 
@@ -379,18 +285,11 @@ def evaluate_lora_linear(
     label_token_ids = torch.tensor(label_token_ids, device=device)  # shape (4,)
     print("🔧 4 类标签的首 token id:", label_token_ids.tolist())
 
-    # === ② 一层 logit bias + mel 阈值的超参（你原代码保留） ===
+    # === ② 一层 logit bias + mel 阈值的超参（先写死，后面可以在 val 上调） ===
     # 顺序对应 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
     logit_bias = torch.tensor([0.2, 0.0, 0.2, -0.5], device=device)
     mel_idx = ALLOWED_DX.index("mel")
     mel_thresh = 0.6  # 只有当 mel 概率 >= 0.6 时才允许预测为 mel
-
-    # 可选：把逐样本解释写到 jsonl，便于后处理
-    jsonl_fp = None
-    if save_reasoning_jsonl and do_generate_reasoning:
-        jsonl_path = os.path.join(LORA_TEXT_DIR, "reasoning_outputs.jsonl")
-        jsonl_fp = open(jsonl_path, "w", encoding="utf-8")
-        print(f"📝 逐样本解释/建议将保存到: {jsonl_path}")
 
     for _, row in df.iterrows():
         image_id = str(row[COL_IMAGE_ID])
@@ -412,7 +311,6 @@ def evaluate_lora_linear(
         clinical_note = build_clinical_note(row)
 
         # prompt：和训练时保持一致，末尾有 "Final answer:"
-        # （这里保持你原评估逻辑，方便和历史结果对齐）
         messages = [
             {
                 "role": "system",
@@ -463,9 +361,9 @@ def evaluate_lora_linear(
 
         with torch.no_grad():
             outputs = model(**inputs)
-
+            # outputs.logits: (1, T, vocab_size)
         last_logits = outputs.logits[0, -1, :]  # (vocab_size,)
-        logits_4 = last_logits[label_token_ids]  # (4,)
+        logits_4 = last_logits[label_token_ids]  # 只取 4 个类别的 logits，shape (4,)
 
         # === ① 一层 logit bias 调整 ===
         logits_4 = logits_4 + logit_bias
@@ -475,6 +373,7 @@ def evaluate_lora_linear(
         pred_idx = int(torch.argmax(probs_4).item())
 
         if pred_idx == mel_idx and probs_4[mel_idx] < mel_thresh:
+            # mel 置信度不够，把 mel logit 再减一点重新选一次
             tmp_logits = logits_4.clone()
             tmp_logits[mel_idx] -= 1.0
             probs_4 = torch.softmax(tmp_logits, dim=-1)
@@ -482,56 +381,20 @@ def evaluate_lora_linear(
 
         pred_label = ALLOWED_DX[pred_idx]
 
+        # 保存最终用于决策的4类概率（顺序与 ALLOWED_DX 一致）
+        y_score_probs.append(probs_4.detach().float().cpu().numpy())
+
         total += 1
-        is_ok = (pred_label == label_raw)
-        if is_ok:
+        if pred_label == label_raw:
             correct += 1
 
         y_true.append(label_raw)
         y_pred.append(pred_label)
 
-        probs_np = probs_4.detach().float().cpu().numpy().reshape(-1)
-        probs_str = np.array2string(probs_np, precision=4, separator=" ", suppress_small=False)
-
         print(
             f"🩺 [{total}] image_id={image_id} | pred={pred_label} | true={label_raw} "
-            f"| {'✅' if is_ok else '❌'} | probs={probs_str}"
+            f"| {'✅' if pred_label == label_raw else '❌'}"
         )
-
-        # ===== 可选：额外生成“依据+治疗建议” =====
-        reasoning_text = ""
-        if do_generate_reasoning:
-            try:
-                reasoning_text = generate_reasoning_and_plan(
-                    model=model,
-                    processor=processor,
-                    device=device,
-                    image=image,
-                    clinical_note=clinical_note,
-                    max_new_tokens=reasoning_max_new_tokens,
-                    temperature=reasoning_temperature,
-                    top_p=reasoning_top_p,
-                )
-            except Exception as e:
-                reasoning_text = f"[GEN_ERROR] {repr(e)}"
-
-            # 也可以在控制台打印一小段，避免刷屏
-            preview = reasoning_text.replace("\n", " ")[:180]
-            print(f"   🧾 reasoning preview: {preview}...")
-
-            if jsonl_fp is not None:
-                rec = {
-                    "image_id": image_id,
-                    "true": label_raw,
-                    "pred": pred_label,
-                    "probs": probs_np.tolist(),
-                    "clinical_note": clinical_note,
-                    "reasoning": reasoning_text,
-                }
-                jsonl_fp.write(json.dumps(rec, ensure_ascii=False) + "\n")
-
-    if jsonl_fp is not None:
-        jsonl_fp.close()
 
     print("\n====== 📊 LoRA 模型在线性推理下的 Test 集评估结果（4 类） ======")
     print(f"有效样本数: {total}")
@@ -551,6 +414,7 @@ def evaluate_lora_linear(
     print("📊 y_pred 标签分布:", {c: int((y_pred_arr == c).sum()) for c in classes})
 
     print("\n====== 📊 classification_report ======")
+    # labels=classes 表示按 ALLOWED_DX 的顺序输出；target_names 保证行名好看
     print(
         classification_report(
             y_true_arr,
@@ -561,11 +425,13 @@ def evaluate_lora_linear(
         )
     )
 
+    # 混淆矩阵（直接用字符串 labels，行列顺序与 ALLOWED_DX 一致）
     cm = confusion_matrix(y_true_arr, y_pred_arr, labels=classes)
     print("\n====== 📊 混淆矩阵（rows=true, cols=pred） ======")
     print(classes)
     print(cm)
 
+    # 使用 sklearn 自带的 ConfusionMatrixDisplay 来画，避免比例被挤压
     fig_cm, ax_cm = plt.subplots(figsize=(6, 6))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
     disp.plot(
@@ -577,19 +443,22 @@ def evaluate_lora_linear(
     ax_cm.set_title("Confusion Matrix (LoRA, 4 classes, linear)")
     ax_cm.set_xlabel("Predicted label")
     ax_cm.set_ylabel("True label")
+
     fig_cm.tight_layout()
     cm_path = os.path.join(LORA_PLOTS_DIR, "confusion_matrix_LoRA_linear_4cls.png")
     fig_cm.savefig(cm_path, dpi=300)
     plt.close(fig_cm)
     print(f"📁 混淆矩阵图已保存到: {cm_path}")
 
-    # ROC & PR（使用 one-hot 预测当作 score 近似）
+    # ROC & PR（使用每个样本的4类概率作为 score；比 one-hot 预测更合理）
     y_true_bin = label_binarize(y_true_arr, classes=classes)
-    scores = np.zeros_like(y_true_bin, dtype=float)
-    for i, pred in enumerate(y_pred_arr):
-        if pred in classes:
-            j = classes.index(pred)
-            scores[i, j] = 1.0
+
+    # y_score_probs: list[np.ndarray]，每个元素 shape=(4,)
+    if len(y_score_probs) != len(y_true_arr):
+        raise RuntimeError(
+            f"y_score_probs 数量({len(y_score_probs)})与样本数({len(y_true_arr)})不一致，无法绘制 ROC/PR 曲线"
+        )
+    scores = np.vstack(y_score_probs).astype(float)  # shape (N, 4)
 
     # ROC
     fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
@@ -606,10 +475,10 @@ def evaluate_lora_linear(
     ax_roc.set_ylim([0.0, 1.05])
     ax_roc.set_xlabel("False Positive Rate")
     ax_roc.set_ylabel("True Positive Rate")
-    ax_roc.set_title("ROC Curves (LoRA, 4 classes, pseudo-scores, linear)")
+    ax_roc.set_title("ROC Curves (LoRA, 4 classes, probability scores, linear)")
     ax_roc.legend(loc="lower right", fontsize=8)
     fig_roc.tight_layout()
-    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_linear_4cls.png")
+    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_prob_linear_4cls.png")
     fig_roc.savefig(roc_path, dpi=300)
     plt.close(fig_roc)
     print(f"📁 ROC 曲线图已保存到: {roc_path}")
@@ -618,7 +487,9 @@ def evaluate_lora_linear(
     fig_pr, ax_pr = plt.subplots(figsize=(6, 5))
     for idx, cls in enumerate(classes):
         try:
-            precision, recall, _ = precision_recall_curve(y_true_bin[:, idx], scores[:, idx])
+            precision, recall, _ = precision_recall_curve(
+                y_true_bin[:, idx], scores[:, idx]
+            )
             ap = average_precision_score(y_true_bin[:, idx], scores[:, idx])
             ax_pr.plot(recall, precision, label=f"{cls} (AP={ap:.2f})")
         except ValueError:
@@ -628,51 +499,18 @@ def evaluate_lora_linear(
     ax_pr.set_ylim([0.0, 1.05])
     ax_pr.set_xlabel("Recall")
     ax_pr.set_ylabel("Precision")
-    ax_pr.set_title("Precision-Recall Curves (LoRA, 4 classes, pseudo-scores, linear)")
+    ax_pr.set_title("Precision-Recall Curves (LoRA, 4 classes, probability scores, linear)")
     ax_pr.legend(loc="lower left", fontsize=8)
     fig_pr.tight_layout()
-    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_linear_4cls.png")
+    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_prob_linear_4cls.png")
     fig_pr.savefig(pr_path, dpi=300)
     plt.close(fig_pr)
     print(f"📁 P-R 曲线图已保存到: {pr_path}")
 
 
-def parse_args():
-    p = argparse.ArgumentParser()
-    p.add_argument("--test_csv", type=str, default=TEST_CSV)
-    p.add_argument("--lora_dir", type=str, default=LORA_DIR)
-    p.add_argument("--image_root", type=str, default=IMAGE_ROOT_DIR)
-    p.add_argument("--image_ext", type=str, default=IMAGE_EXT)
-    p.add_argument("--plots_dir", type=str, default=LORA_PLOTS_DIR)
-
-    p.add_argument("--no_reasoning", action="store_true", help="不额外生成“依据+治疗建议”，只跑分类评估")
-    p.add_argument("--reasoning_max_new_tokens", type=int, default=256)
-    p.add_argument("--reasoning_temperature", type=float, default=0.2)
-    p.add_argument("--reasoning_top_p", type=float, default=0.9)
-    p.add_argument("--no_save_jsonl", action="store_true", help="不保存逐样本 jsonl 输出")
-    return p.parse_args()
-
+# ========== 主入口：评估 LoRA 微调后模型（线性推理） ==========
 
 if __name__ == "__main__":
     warnings.filterwarnings("once")
     set_seed(42)
-
-    args = parse_args()
-
-    # 允许用命令行覆盖路径（不破坏原默认值）
-    TEST_CSV = args.test_csv
-    LORA_DIR = args.lora_dir
-    IMAGE_ROOT_DIR = args.image_root
-    IMAGE_EXT = args.image_ext
-    LORA_PLOTS_DIR = args.plots_dir
-    os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
-    LORA_TEXT_DIR = os.path.join(LORA_PLOTS_DIR, "reasoning_outputs")
-    os.makedirs(LORA_TEXT_DIR, exist_ok=True)
-
-    evaluate_lora_linear(
-        do_generate_reasoning=(not args.no_reasoning),
-        reasoning_max_new_tokens=args.reasoning_max_new_tokens,
-        reasoning_temperature=args.reasoning_temperature,
-        reasoning_top_p=args.reasoning_top_p,
-        save_reasoning_jsonl=(not args.no_save_jsonl),
-    )
+    evaluate_lora_linear()

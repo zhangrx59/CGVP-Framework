@@ -5,33 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="298a7252-b432-4b2d-86ef-9ba37e173337" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/a.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/evaluate_medgamma2.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/akiec.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/bcc.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/differential.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/mel.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docs/nev.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evaluate_medgemma+rag.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/LoRA_medgamma.py" beforeDir="false" afterPath="$PROJECT_DIR$/LoRA_medgamma.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_medgamma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgamma.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/inference_medgamma_lora_treatment.py" beforeDir="false" afterPath="$PROJECT_DIR$/inference_medgamma_lora_treatment.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/adapter_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/chat_template.jinja" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/adapter_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/rng_state.pth" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/scheduler.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/trainer_state.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/training_args.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/README.md" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/adapter_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/rng_state.pth" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/scheduler.pt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/trainer_state.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/training_args.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/preprocessor_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/processor_config.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/special_tokens_map.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/tokenizer.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lora_focal/tokenizer_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_medgamma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_medgamma2.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma+reasoning.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_qwen.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_qwen.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lab5_results/confusion_matrix_LoRA_linear_4cls.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab5_results/confusion_matrix_LoRA_linear_4cls.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/medgamma_lora.py" beforeDir="false" afterPath="$PROJECT_DIR$/medgamma_lora.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/medgemma_resnet+lora.py" beforeDir="false" afterPath="$PROJECT_DIR$/medgemma_resnet+lora.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +81,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "LoRA",
-    "last_opened_file_path": "C:/Users/zhangrx59/PycharmProjects/LoRA",
+    "last_opened_file_path": "C:/Users/zhangrx59/PycharmProjects/LoRA/docs",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -107,6 +93,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA\docs" />
       <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA" />
     </key>
     <key name="MoveFile.RECENT_KEYS">

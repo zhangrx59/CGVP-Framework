@@ -1,0 +1,16 @@
+Melanoma is a highly aggressive malignant tumor of melanocytes.
+
+Clinical warning signs include:
+- Asymmetry
+- Irregular borders
+- Multiple or uneven colors
+- Diameter greater than 6 mm
+- Rapid evolution
+
+Dermoscopy features may include:
+- Atypical pigment network
+- Blue-white veil
+- Irregular dots and globules
+- Regression structures
+
+Melanoma carries a high risk of metastasis and requires prompt diagnosis and surgical management.

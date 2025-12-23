@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-仿照 evaluate_medgamma.py 的评估格式，但用于 Qwen2.5-VL LoRA/QLoRA 皮肤病 4 分类：
+仿照 evaluate_medgemma.py 的评估格式，但用于 Qwen2.5-VL LoRA/QLoRA 皮肤病 4 分类：
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]  (无 bkl)
 
 核心点：
@@ -254,7 +254,7 @@ def evaluate_qwen_lora_linear():
             missing += 1
             continue
 
-        # 你如果希望完全复用 MedGEMMA 的临床信息拼接，可把 evaluate_medgamma.py 里的 build_clinical_note() 拷过来
+        # 你如果希望完全复用 MedGEMMA 的临床信息拼接，可把 evaluate_medgemma.py 里的 build_clinical_note() 拷过来
         # 这里最小化：如果你的 CSV 没有临床字段，就用空字符串也行
         clinical_note = ""
         if "年龄" in df.columns or "性别" in df.columns or "区域" in df.columns:

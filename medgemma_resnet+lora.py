@@ -203,7 +203,7 @@ def yn_str(v, yes="yes", no="no", unk="unknown"):
 
 def build_clinical_note(row) -> str:
     """
-    构造英文病历描述（和 evaluate_medgamma.py 中逻辑保持一致）
+    构造英文病历描述（和 evaluate_medgemma.py 中逻辑保持一致）
     """
     age = row.get(COL_AGE, "")
     sex_raw = str(row.get(COL_SEX, "") or "").strip().lower()
