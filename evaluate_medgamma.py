@@ -45,7 +45,7 @@ IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录
-LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab5_results"
+LORA_PLOTS_DIR = r"/lab5_results"
 os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）
@@ -271,6 +271,7 @@ def evaluate_lora_linear():
     model, processor, device = load_lora_model_and_processor()
 
     y_true, y_pred = [], []
+    y_score_probs = []  # 每个样本的4类概率，用于画ROC/PR曲线
     total, correct = 0, 0
     missing_image = 0
 
@@ -380,6 +381,9 @@ def evaluate_lora_linear():
 
         pred_label = ALLOWED_DX[pred_idx]
 
+        # 保存最终用于决策的4类概率（顺序与 ALLOWED_DX 一致）
+        y_score_probs.append(probs_4.detach().float().cpu().numpy())
+
         total += 1
         if pred_label == label_raw:
             correct += 1
@@ -446,14 +450,15 @@ def evaluate_lora_linear():
     plt.close(fig_cm)
     print(f"📁 混淆矩阵图已保存到: {cm_path}")
 
-
-    # ROC & PR（使用 one-hot 预测当作 score 近似）
+    # ROC & PR（使用每个样本的4类概率作为 score；比 one-hot 预测更合理）
     y_true_bin = label_binarize(y_true_arr, classes=classes)
-    scores = np.zeros_like(y_true_bin, dtype=float)
-    for i, pred in enumerate(y_pred_arr):
-        if pred in classes:
-            j = classes.index(pred)
-            scores[i, j] = 1.0
+
+    # y_score_probs: list[np.ndarray]，每个元素 shape=(4,)
+    if len(y_score_probs) != len(y_true_arr):
+        raise RuntimeError(
+            f"y_score_probs 数量({len(y_score_probs)})与样本数({len(y_true_arr)})不一致，无法绘制 ROC/PR 曲线"
+        )
+    scores = np.vstack(y_score_probs).astype(float)  # shape (N, 4)
 
     # ROC
     fig_roc, ax_roc = plt.subplots(figsize=(6, 5))
@@ -470,10 +475,10 @@ def evaluate_lora_linear():
     ax_roc.set_ylim([0.0, 1.05])
     ax_roc.set_xlabel("False Positive Rate")
     ax_roc.set_ylabel("True Positive Rate")
-    ax_roc.set_title("ROC Curves (LoRA, 4 classes, pseudo-scores, linear)")
+    ax_roc.set_title("ROC Curves (LoRA, 4 classes, probability scores, linear)")
     ax_roc.legend(loc="lower right", fontsize=8)
     fig_roc.tight_layout()
-    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_linear_4cls.png")
+    roc_path = os.path.join(LORA_PLOTS_DIR, "roc_curve_LoRA_prob_linear_4cls.png")
     fig_roc.savefig(roc_path, dpi=300)
     plt.close(fig_roc)
     print(f"📁 ROC 曲线图已保存到: {roc_path}")
@@ -494,10 +499,10 @@ def evaluate_lora_linear():
     ax_pr.set_ylim([0.0, 1.05])
     ax_pr.set_xlabel("Recall")
     ax_pr.set_ylabel("Precision")
-    ax_pr.set_title("Precision-Recall Curves (LoRA, 4 classes, pseudo-scores, linear)")
+    ax_pr.set_title("Precision-Recall Curves (LoRA, 4 classes, probability scores, linear)")
     ax_pr.legend(loc="lower left", fontsize=8)
     fig_pr.tight_layout()
-    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_linear_4cls.png")
+    pr_path = os.path.join(LORA_PLOTS_DIR, "pr_curve_LoRA_prob_linear_4cls.png")
     fig_pr.savefig(pr_path, dpi=300)
     plt.close(fig_pr)
     print(f"📁 P-R 曲线图已保存到: {pr_path}")

@@ -5,11 +5,33 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="298a7252-b432-4b2d-86ef-9ba37e173337" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/inference_medgamma_lora_treatment.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/server.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/a.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/evaluate_medgamma2.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Lora_ResNet.py" beforeDir="false" afterPath="$PROJECT_DIR$/Lora_ResNet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/LoRA_medgamma.py" beforeDir="false" afterPath="$PROJECT_DIR$/LoRA_medgamma.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluate_medgamma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgamma.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/inference_medgamma_lora_treatment.py" beforeDir="false" afterPath="$PROJECT_DIR$/inference_medgamma_lora_treatment.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/adapter_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/chat_template.jinja" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/adapter_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/rng_state.pth" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/scheduler.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/trainer_state.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-304/training_args.bin" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/adapter_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/rng_state.pth" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/scheduler.pt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/trainer_state.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/checkpoint-342/training_args.bin" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/preprocessor_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/processor_config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/special_tokens_map.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/tokenizer.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lora_focal/tokenizer_config.json" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,44 +70,50 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.LoRA_medgamma.executor&quot;: &quot;Run&quot;,
-    &quot;Python.LoRA_medgamma2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Lora_ResNet.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Lora_resnet2.executor&quot;: &quot;Run&quot;,
-    &quot;Python.ResNet.executor&quot;: &quot;Run&quot;,
-    &quot;Python.call_medgamma.executor&quot;: &quot;Run&quot;,
-    &quot;Python.dataset_split.executor&quot;: &quot;Run&quot;,
-    &quot;Python.evaluate_medgamma.executor&quot;: &quot;Run&quot;,
-    &quot;Python.evaluate_resnet.executor&quot;: &quot;Run&quot;,
-    &quot;Python.generate_dataset.executor&quot;: &quot;Run&quot;,
-    &quot;Python.medgamma.executor&quot;: &quot;Run&quot;,
-    &quot;Python.server.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;LoRA&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/zhangrx59/PycharmProjects/LoRA&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.LoRA_medgamma.executor": "Run",
+    "Python.LoRA_medgamma2.executor": "Run",
+    "Python.Lora_ResNet.executor": "Run",
+    "Python.Lora_resnet2.executor": "Run",
+    "Python.ResNet.executor": "Run",
+    "Python.a.executor": "Run",
+    "Python.baseline.executor": "Run",
+    "Python.call_medgamma.executor": "Run",
+    "Python.dataset_split.executor": "Run",
+    "Python.evaluate_medgamma.executor": "Run",
+    "Python.evaluate_medgamma2.executor": "Run",
+    "Python.evaluate_resnet.executor": "Run",
+    "Python.generate_dataset.executor": "Run",
+    "Python.inference_medgamma_lora_treatment.executor": "Run",
+    "Python.medgamma.executor": "Run",
+    "Python.qwen_lora.executor": "Run",
+    "Python.server.executor": "Run",
+    "Python.test.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "LoRA",
+    "last_opened_file_path": "C:/Users/zhangrx59/PycharmProjects/LoRA",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA\vision_model" />
+      <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA\dataset_clean" />
       <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA" />
       <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA\lab4" />
-      <recent name="C:\Users\zhangrx59\PycharmProjects\LoRA\dataset_clean" />
     </key>
   </component>
   <component name="SharedIndexes">

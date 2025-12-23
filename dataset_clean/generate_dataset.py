@@ -340,5 +340,5 @@ async def annotate_image_shapes_async(
 
 if __name__ == "__main__":
     print("🚀 启动皮肤病变“性状”标注程序（异步协程版，断点续跑）...")
-    asyncio.run(annotate_image_shapes_async("../config.json"))
+    asyncio.run(annotate_image_shapes_async("../vision_model/config.json"))
     print("✅ 全部完成。")

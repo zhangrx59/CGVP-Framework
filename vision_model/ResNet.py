@@ -475,7 +475,7 @@ def main():
     total_loss_val, total_acc_val = [], []
 
     # 模型和类别名一起保存，供评估脚本读取
-    best_model_path = "../best_resnet50_custom_cbam_focal.pth"
+    best_model_path = "best_resnet50_custom_cbam_focal.pth"
 
     for epoch in range(1, epoch_num + 1):
         loss_train, acc_train = train_one_epoch(
