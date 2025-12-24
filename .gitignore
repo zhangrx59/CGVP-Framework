@@ -9,5 +9,4 @@ qwen25vl_derm_lora/
 qwen25vl_derm_lora2/
 lorafocal/
 baseline2/
-ISIC_dataset.7z/
-skin-cancer.7z/
+original_dataset/
