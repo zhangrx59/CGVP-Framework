@@ -40,7 +40,7 @@ METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata.csv"
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"
 
-TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train_balanced.csv"
+TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train.csv"
 VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
 TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
@@ -675,8 +675,8 @@ def load_model_and_processor():
 
     # 先保持你原来的 LoRA 配置（如需再扩 target_modules 可以后续迭代）
     lora_config = LoraConfig(
-        r=8,
-        lora_alpha=16,
+        r=16,
+        lora_alpha=32,
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM",
@@ -685,6 +685,10 @@ def load_model_and_processor():
             "k_proj",
             "v_proj",
             "o_proj",
+
+            "gate_proj",
+            "up_proj",
+            "down_proj",
         ],
     )
 

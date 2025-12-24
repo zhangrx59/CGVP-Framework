@@ -284,9 +284,9 @@ def evaluate_lora_linear():
 
     # === ② 一层 logit bias + mel 阈值的超参（先写死，后面可以在 val 上调） ===
     # 顺序对应 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
-    logit_bias = torch.tensor([0.2, 0.0, 0.2, -0.5], device=device)
+    logit_bias = torch.tensor([-0.2, 0.4, 0.2, -0.5], device=device)
     mel_idx = ALLOWED_DX.index("mel")
-    mel_thresh = 0.6  # 只有当 mel 概率 >= 0.6 时才允许预测为 mel
+    mel_thresh = 0.55  # 只有当 mel 概率 >= 0.6 时才允许预测为 mel
 
     for _, row in df.iterrows():
         image_id = str(row[COL_IMAGE_ID])
