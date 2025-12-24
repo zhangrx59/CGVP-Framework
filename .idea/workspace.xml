@@ -5,13 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="298a7252-b432-4b2d-86ef-9ba37e173337" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/dataset_clean/clean.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/exam.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluate_medgemma+rag.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma+rag.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluate_medgemma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab5_results/pr_curve_LoRA_linear_4cls.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab5_results/roc_curve_LoRA_linear_4cls.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/medgemma_resnet+lora.py" beforeDir="false" afterPath="$PROJECT_DIR$/medgemma_resnet+lora.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vision_model/evaluate_resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/vision_model/evaluate_resnet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metadata.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/metadata_test.csv" beforeDir="false" afterPath="$PROJECT_DIR$/metadata_test.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metadata_train.csv" beforeDir="false" afterPath="$PROJECT_DIR$/metadata_train.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metadata_train_balanced.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/metadata_val.csv" beforeDir="false" afterPath="$PROJECT_DIR$/metadata_val.csv" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,11 +65,14 @@
     "Python.a.executor": "Run",
     "Python.baseline.executor": "Run",
     "Python.call_medgamma.executor": "Run",
+    "Python.clean.executor": "Run",
+    "Python.data_strengthen.executor": "Run",
     "Python.dataset_split.executor": "Run",
     "Python.evaluate_medgamma.executor": "Run",
     "Python.evaluate_medgamma2.executor": "Run",
     "Python.evaluate_medgemma+rag.executor": "Run",
     "Python.evaluate_resnet.executor": "Run",
+    "Python.exam.executor": "Run",
     "Python.generate_dataset.executor": "Run",
     "Python.inference_medgamma_lora_treatment.executor": "Run",
     "Python.medgamma.executor": "Run",

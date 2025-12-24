@@ -31,21 +31,18 @@ from sklearn.preprocessing import label_binarize
 
 BASE_MODEL = "google/medgemma-4b-it"
 
-# 原始 metadata CSV（不一定用得到，只是留档）
-METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_isic_with_shape.csv"
-
 # 微调脚本中 prepare_splits() 生成的 test CSV
 TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # LoRA 权重所在目录（要和微调脚本里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab6"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab7"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录
-LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab6_results"
+LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab7_results"
 os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）
