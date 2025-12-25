@@ -35,14 +35,14 @@ BASE_MODEL = "google/medgemma-4b-it"
 TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # LoRA 权重所在目录（要和微调脚本里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab6"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab7"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"   # 如果是 .jpg 改成 ".jpg"
 
 # 评估图像保存目录
-LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab7_results"
+LORA_PLOTS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab8_results"
 os.makedirs(LORA_PLOTS_DIR, exist_ok=True)
 
 # 列名（与微调脚本保持一致）
@@ -284,7 +284,9 @@ def evaluate_lora_linear():
 
     # === ② 一层 logit bias + mel 阈值的超参（先写死，后面可以在 val 上调） ===
     # 顺序对应 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]
-    logit_bias = torch.tensor([-0.2, 0.4, 0.2, -0.5], device=device)
+    logit_bias = torch.tensor([1.75, 1.0, 0.0, -1.0], device=device)
+
+    # logit_bias = torch.tensor([-0.2, 0.4, 0.2, -0.5], device=device)
     mel_idx = ALLOWED_DX.index("mel")
     mel_thresh = 0.55  # 只有当 mel 概率 >= 0.6 时才允许预测为 mel
 

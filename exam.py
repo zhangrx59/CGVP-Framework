@@ -17,9 +17,9 @@ import pandas as pd
 # ===================== 你只需要改这里 =====================
 IMG_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 
-TRAIN_CSV = r"C:\Users\zhangrx59\Desktop\dataset\metadata_train.csv"
-VAL_CSV   = r"C:\Users\zhangrx59\Desktop\dataset\metadata_val.csv"
-TEST_CSV  = r"C:\Users\zhangrx59\Desktop\dataset\metadata_test.csv"
+TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train_balanced.csv"
+VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
+TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # 支持的图片后缀（按你的实际情况）
 IMG_EXTS = {".jpg", ".jpeg", ".png"}

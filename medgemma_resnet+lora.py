@@ -86,7 +86,7 @@ RESNET_CONF_THRESH = 0.9
 USE_RESNET_KL = True
 RESNET_KL_WEIGHT = 0.05
 # LoRA 微调输出目录
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab6"
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab8"
 
 
 # ===================== 0.1 ResNet+CBAM 定义（用于推理） =====================
@@ -659,8 +659,8 @@ def load_model_and_processor():
 
     # 先保持你原来的 LoRA 配置（如需再扩 target_modules 可以后续迭代）
     lora_config = LoraConfig(
-        r=8,
-        lora_alpha=16,
+        r=32,
+        lora_alpha=64,
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM",
@@ -669,6 +669,9 @@ def load_model_and_processor():
             "k_proj",
             "v_proj",
             "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
         ],
     )
 
@@ -742,7 +745,7 @@ class Softmax5Trainer(Trainer):
             logits_n,
             cls_labels.to(device),
             weight=weight,
-            label_smoothing=0.0,
+            label_smoothing=0.05,
         )
 
         # Scheme B: ResNet KL consistency（只在 ResNet 高置信样本上启用）

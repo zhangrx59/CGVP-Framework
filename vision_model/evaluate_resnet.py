@@ -46,10 +46,10 @@ IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT_CANDIDATES = [".png", ".jpg", ".jpeg", ".PNG", ".JPG", ".JPEG"]
 
 # 训练脚本中保存的 best 模型路径
-BEST_MODEL_PATH = r"best_resnet50_custom_cbam_focal.pth"
+BEST_MODEL_PATH = r"C:\Users\zhangrx59\PycharmProjects\LoRA\vision_model\best_resnet50_custom_cbam_focal.pth"
 
 # 输出图片/报告目录
-PICS_DIR = r".\resnet50_eval_outputs"
+PICS_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\vision_model\resnet50_eval_outputs"
 
 
 # ================== 1. 工具函数和模块 ==================

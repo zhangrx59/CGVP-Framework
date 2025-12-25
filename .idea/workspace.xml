@@ -5,14 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="298a7252-b432-4b2d-86ef-9ba37e173337" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/laji.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/evaluate_medgemma.py" beforeDir="false" afterPath="$PROJECT_DIR$/evaluate_medgemma.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab7_results/confusion_matrix_LoRA_linear_4cls.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab7_results/confusion_matrix_LoRA_linear_4cls.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab7_results/pr_curve_LoRA_prob_linear_4cls.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab7_results/pr_curve_LoRA_prob_linear_4cls.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lab7_results/roc_curve_LoRA_prob_linear_4cls.png" beforeDir="false" afterPath="$PROJECT_DIR$/lab7_results/roc_curve_LoRA_prob_linear_4cls.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/exam.py" beforeDir="false" afterPath="$PROJECT_DIR$/exam.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/medgemma_resnet+lora.py" beforeDir="false" afterPath="$PROJECT_DIR$/medgemma_resnet+lora.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/metadata.csv" beforeDir="false" afterPath="$PROJECT_DIR$/metadata.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vision_model/evaluate_resnet.py" beforeDir="false" afterPath="$PROJECT_DIR$/vision_model/evaluate_resnet.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/classification_report.txt" beforeDir="false" afterPath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/classification_report.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/confusion_matrix.png" beforeDir="false" afterPath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/confusion_matrix.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/pr_curves.png" beforeDir="false" afterPath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/pr_curves.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/roc_curves.png" beforeDir="false" afterPath="$PROJECT_DIR$/vision_model/resnet50_eval_outputs/roc_curves.png" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -68,6 +70,7 @@
     "Python.evaluate_medgamma.executor": "Run",
     "Python.evaluate_medgamma2.executor": "Run",
     "Python.evaluate_medgemma+rag.executor": "Run",
+    "Python.evaluate_medgemma.executor": "Run",
     "Python.evaluate_resnet.executor": "Run",
     "Python.exam.executor": "Run",
     "Python.generate_dataset.executor": "Run",
