@@ -35,7 +35,7 @@ BASE_MODEL = "google/medgemma-4b-it"
 TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # LoRA 权重所在目录（要和微调脚本里的 OUTPUT_DIR 一致）
-LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab7"
+LORA_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab6"
 
 # 图像根目录和后缀
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"

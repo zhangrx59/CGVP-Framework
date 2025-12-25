@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import math
 import os
+import argparse
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple, List
 
@@ -39,54 +40,66 @@ METADATA_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata.csv"
 IMAGE_ROOT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\ISIC_dataset"
 IMAGE_EXT = ".png"
 
-TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train_balanced.csv"
-VAL_CSV   = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
-TEST_CSV  = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
+TRAIN_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_train.csv"
+VAL_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_val.csv"
+TEST_CSV = r"C:\Users\zhangrx59\PycharmProjects\LoRA\metadata_test.csv"
 
 # 🔴 ResNet 视觉模块 pth 路径（你训练好的那个）
 RESNET_CKPT = r"C:\Users\zhangrx59\PycharmProjects\LoRA\vision_model\best_resnet50_custom_cbam_focal.pth"
 
-COL_IMAGE_ID    = "image_id"
-COL_AGE         = "年龄"
-COL_SEX         = "性别"
-COL_FATHER_ORI  = "父籍贯"
-COL_MOTHER_ORI  = "母籍贯"
-COL_BIOPSY      = "是否活检"
-COL_SMOKE       = "是否吸烟"
-COL_DRINK       = "是否饮酒"
-COL_PESTICIDE   = "农药"
+COL_IMAGE_ID = "image_id"
+COL_AGE = "年龄"
+COL_SEX = "性别"
+COL_FATHER_ORI = "父籍贯"
+COL_MOTHER_ORI = "母籍贯"
+COL_BIOPSY = "是否活检"
+COL_SMOKE = "是否吸烟"
+COL_DRINK = "是否饮酒"
+COL_PESTICIDE = "农药"
 COL_SKIN_CANCER = "皮肤癌病史"
-COL_OTHER_CA    = "癌症病史"
-COL_TAP_WATER   = "生活环境是否有自来水"
-COL_SEWER       = "生活环境是否有下水道"
-COL_PHOTOTYPE   = "皮肤光型"
-COL_REGION      = "区域"
-COL_D1          = "直径1"
-COL_D2          = "直径2"
-COL_PRURITUS    = "瘙痒"
-COL_GROWTH      = "是否长大"
-COL_PAIN        = "疼痛"
-COL_MORPH_CHANGE= "形态变化"
-COL_BLEEDING    = "出血"
-COL_ELEVATED    = "是否隆起"
+COL_OTHER_CA = "癌症病史"
+COL_TAP_WATER = "生活环境是否有自来水"
+COL_SEWER = "生活环境是否有下水道"
+COL_PHOTOTYPE = "皮肤光型"
+COL_REGION = "区域"
+COL_D1 = "直径1"
+COL_D2 = "直径2"
+COL_PRURITUS = "瘙痒"
+COL_GROWTH = "是否长大"
+COL_PAIN = "疼痛"
+COL_MORPH_CHANGE = "形态变化"
+COL_BLEEDING = "出血"
+COL_ELEVATED = "是否隆起"
 
-COL_TARGET      = "dx"
+COL_TARGET = "dx"
 # 现在只训练 4 类：akiec, bcc, nev, mel
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]  # 固定顺序，后面要用 index
 
 # ===== ResNet 先验控制开关 =====
 # 建议：先用 False 训练一版「不带 ResNet 先验」做对照，如果需要再改 True
-USE_RESNET_PRIOR = False
+USE_RESNET_PRIOR = True
 # 只有当 ResNet 对 top 类的概率 ≥ 该阈值时，才认为是“相对可信”的先验
-RESNET_CONF_THRESH = 0.9
-
+RESNET_CONF_THRESH = 0.7
 
 # ===== ResNet KL consistency (Scheme B) =====
 # Whether to add KL(p_llm || p_resnet) on 4-class distribution (only when ResNet is confident)
 USE_RESNET_KL = True
-RESNET_KL_WEIGHT = 0.05
+RESNET_KL_WEIGHT = 0.3
+
+# ===== Tunable knobs (CLI overrides in main) =====
+# Cross-entropy label smoothing (set 0.0 for sharper boundaries)
+CE_LABEL_SMOOTHING = 0.1
+
+# KL gating & schedule
+KL_WARMUP_STEPS = 0  # e.g., 400: ramp KL from 0->1 over first 400 steps
+KL_USE_SOFT_GATE = True  # True: weight = clamp((conf-thresh)/(1-thresh),0,1); False: hard mask
+
+# Strengthen akiec (recall booster)
+AKIEC_LOGIT_BIAS = 0.0  # e.g., 0.2~0.5 can increase akiec recall
+AKIEC_CE_WEIGHT = 1.0  # e.g., 2.0 to upweight akiec in CE
+DISABLE_KL_ON_AKIEC = True  # recommended: avoid ResNet prior dragging akiec to bcc
 # LoRA 微调输出目录
-OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab6"
+OUTPUT_DIR = r"C:\Users\zhangrx59\PycharmProjects\LoRA\lab8"
 
 
 # ===================== 0.1 ResNet+CBAM 定义（用于推理） =====================
@@ -175,7 +188,7 @@ def load_resnet_prior_model(device: torch.device):
     model_resnet.eval()
 
     norm_mean = [0.485, 0.456, 0.406]
-    norm_std  = [0.229, 0.224, 0.225]
+    norm_std = [0.229, 0.224, 0.225]
     transform_resnet = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
@@ -307,10 +320,10 @@ def normalize_dx(label: str) -> str:
 # ===================== 2. train/val/test 划分（不重采样） =====================
 
 def prepare_splits(
-    seed: int = 42,
-    train_ratio: float = 0.7,
-    val_ratio: float = 0.15,
-    test_ratio: float = 0.15,
+        seed: int = 42,
+        train_ratio: float = 0.7,
+        val_ratio: float = 0.15,
+        test_ratio: float = 0.15,
 ) -> Tuple[str, str, str]:
     """
     不做重采样，只做分层划分，结果写入 TRAIN_CSV/VAL_CSV/TEST_CSV
@@ -381,13 +394,14 @@ class DermMetadataDataset(TorchDataset):
       - target_text: label code 文本 ('akiec' / 'bcc' / 'nev' / 'mel')
       - cls_label_idx: 0~3（在 ALLOWED_DX 里的索引，用于 softmax）
     """
+
     def __init__(
-        self,
-        hf_or_df,
-        resnet_model: nn.Module,
-        resnet_transform: transforms.Compose,
-        resnet_dx_categories: List[str],
-        resnet_device: torch.device,
+            self,
+            hf_or_df,
+            resnet_model: nn.Module,
+            resnet_transform: transforms.Compose,
+            resnet_dx_categories: List[str],
+            resnet_device: torch.device,
     ):
         if isinstance(hf_or_df, pd.DataFrame):
             self.df = hf_or_df.reset_index(drop=True)
@@ -406,7 +420,9 @@ class DermMetadataDataset(TorchDataset):
         return len(self.df)
 
     def _get_resnet_prior(self, image_id: str, pil_image: Image.Image) -> Tuple[str, np.ndarray]:
-
+        """
+        对单张图像做一次 ResNet 推理，输出英文先验描述 + 4 类概率分布（按 ALLOWED_DX 顺序），并做缓存。
+        """
         if image_id in self._prior_cache:
             return self._prior_cache[image_id]
 
@@ -457,7 +473,6 @@ class DermMetadataDataset(TorchDataset):
 
         self._prior_cache[image_id] = (prior_text, probs4)
         return prior_text, probs4
-
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
@@ -570,7 +585,7 @@ class MedGemmaCollator:
         messages_list = [eg["messages"] for eg in batch]
         targets = [eg["target_text"] for eg in batch]
         cls_labels = [eg["cls_label_idx"] for eg in batch]
-        resnet_probs = [eg.get("resnet_probs", np.array([0.25,0.25,0.25,0.25], dtype=np.float32)) for eg in batch]
+        resnet_probs = [eg.get("resnet_probs", np.array([0.25, 0.25, 0.25, 0.25], dtype=np.float32)) for eg in batch]
 
         texts = []
         prompt_texts = []
@@ -659,8 +674,8 @@ def load_model_and_processor():
 
     # 先保持你原来的 LoRA 配置（如需再扩 target_modules 可以后续迭代）
     lora_config = LoraConfig(
-        r=8,
-        lora_alpha=16,
+        r=16,
+        lora_alpha=32,
         lora_dropout=0.05,
         bias="none",
         task_type="CAUSAL_LM",
@@ -669,6 +684,10 @@ def load_model_and_processor():
             "k_proj",
             "v_proj",
             "o_proj",
+
+            "gate_proj",
+            "up_proj",
+            "down_proj",
         ],
     )
 
@@ -681,7 +700,7 @@ def load_model_and_processor():
         total += p.numel()
         if p.requires_grad:
             trainable += p.numel()
-    print(f"📊 总参数: {total/1e6:.1f}M, 可训练(LoRA): {trainable/1e6:.1f}M")
+    print(f"📊 总参数: {total / 1e6:.1f}M, 可训练(LoRA): {trainable / 1e6:.1f}M")
     print(f"🔧 模型当前设备: {next(model.parameters()).device}")
 
     return model, processor
@@ -696,12 +715,13 @@ class Softmax5Trainer(Trainer):
     - 从 logits + labels 中找到“第一个答案 token 的位置”
     - 在该位置，只取 N 个标签对应的 token logit，做 N 类 softmax 交叉熵
     """
+
     def __init__(
-        self,
-        label_token_ids: List[int],
-        class_weights: torch.Tensor = None,  # 支持类权重
-        *args,
-        **kwargs,
+            self,
+            label_token_ids: List[int],
+            class_weights: torch.Tensor = None,  # 支持类权重
+            *args,
+            **kwargs,
     ):
         super().__init__(*args, **kwargs)
         # 长度为 N 的 token id 列表，对应 ALLOWED_DX 顺序
@@ -711,7 +731,7 @@ class Softmax5Trainer(Trainer):
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         # 兼容 Trainer 额外参数
-        labels = inputs.pop("labels")          # (B, T)
+        labels = inputs.pop("labels")  # (B, T)
         cls_labels = inputs.pop("cls_labels")  # (B,)
         resnet_probs = inputs.pop("resnet_probs", None)  # (B, 4) or None
 
@@ -726,43 +746,68 @@ class Softmax5Trainer(Trainer):
         first_pos = mask.float().argmax(dim=1)  # (B,)
 
         batch_idx = torch.arange(logits.size(0), device=device)
-        # 取出每个样本在答案首 token 位置的 logits: (B, V)
         logits_first = logits[batch_idx, first_pos, :]  # (B, V)
 
-        # 只保留 N 个 label token 的 logits，得到 (B, N)
+        # 只保留 N 个 label token 的 logits，得到 (B, 4)
         logits_n = logits_first[:, label_token_ids]  # (B, 4)
 
-        # 把权重搬到和 logits 同一个 device 上
+        # ---- Optional: strengthen akiec (recall boosters) ----
+        if AKIEC_LOGIT_BIAS and AKIEC_LOGIT_BIAS != 0.0:
+            akiec_idx = ALLOWED_DX.index("akiec")
+            logits_n[:, akiec_idx] = logits_n[:, akiec_idx] + float(AKIEC_LOGIT_BIAS)
+
+        # ---- CE weights ----
         weight = None
         if self.class_weights is not None:
-            weight = self.class_weights.to(device)
+            weight = self.class_weights.to(device=device, dtype=logits_n.dtype)
 
-        # 主分类损失（4 类 softmax）
+        if AKIEC_CE_WEIGHT and AKIEC_CE_WEIGHT != 1.0:
+            akiec_idx = ALLOWED_DX.index("akiec")
+            if weight is None:
+                weight = torch.ones(len(ALLOWED_DX), device=device, dtype=logits_n.dtype)
+            weight = weight.clone()
+            weight[akiec_idx] = weight[akiec_idx] * float(AKIEC_CE_WEIGHT)
+
         ce_loss = F.cross_entropy(
             logits_n,
             cls_labels.to(device),
             weight=weight,
-            label_smoothing=0.0,
+            label_smoothing=float(CE_LABEL_SMOOTHING),
         )
 
-        # Scheme B: ResNet KL consistency（只在 ResNet 高置信样本上启用）
+        # ---- Scheme B: ResNet KL consistency ----
         kl_loss = torch.tensor(0.0, device=device)
         if USE_RESNET_KL and (RESNET_KL_WEIGHT > 0) and (resnet_probs is not None):
             resnet_probs = resnet_probs.to(device)
-            # 归一化（防止数值问题）
             resnet_probs = resnet_probs / (resnet_probs.sum(dim=-1, keepdim=True) + 1e-8)
 
             llm_probs = F.softmax(logits_n, dim=-1)
-            resnet_probs = resnet_probs / (resnet_probs.sum(dim=-1, keepdim=True) + 1e-8)
 
             resnet_conf, _ = resnet_probs.max(dim=-1)  # (B,)
-            mask_conf = (resnet_conf > RESNET_CONF_THRESH).float().unsqueeze(-1)  # (B,1)
-            kl = F.kl_div(resnet_probs.log(), llm_probs, reduction="none")  # 这才是 KL(p_llm || p_resnet)
-            kl_loss = (kl * mask_conf).sum(dim=-1)  # 每样本一个 kl
-            kl_loss = (kl_loss * mask_conf.squeeze(-1)).sum() / (mask_conf.squeeze(-1).sum() + 1e-8)
 
+            if KL_USE_SOFT_GATE:
+                w = (resnet_conf - RESNET_CONF_THRESH) / (1.0 - RESNET_CONF_THRESH + 1e-8)
+                w = w.clamp(min=0.0, max=1.0).unsqueeze(-1)  # (B,1)
+            else:
+                w = (resnet_conf > RESNET_CONF_THRESH).float().unsqueeze(-1)  # (B,1)
 
-        loss = ce_loss + RESNET_KL_WEIGHT * kl_loss
+            if DISABLE_KL_ON_AKIEC:
+                akiec_idx = ALLOWED_DX.index("akiec")
+                is_akiec = (cls_labels.to(device) == akiec_idx).float().unsqueeze(-1)
+                w = w * (1.0 - is_akiec)
+
+            # PyTorch: kl_div(input_log_probs, target_probs) = KL(target || input)
+            kl = F.kl_div(llm_probs.log(), resnet_probs, reduction="none")  # (B,4)
+            kl_per = kl.sum(dim=-1, keepdim=True)  # (B,1)
+
+            kl_loss = (kl_per * w).sum() / (w.sum() + 1e-8)
+
+            if KL_WARMUP_STEPS and KL_WARMUP_STEPS > 0:
+                step = float(self.state.global_step)
+                scale = min(1.0, step / float(KL_WARMUP_STEPS))
+                kl_loss = kl_loss * scale
+
+        loss = ce_loss + float(RESNET_KL_WEIGHT) * kl_loss
 
         if return_outputs:
             return loss, outputs
@@ -771,8 +816,90 @@ class Softmax5Trainer(Trainer):
 
 # ===================== 7. 主训练入口 =====================
 
+def parse_args():
+    p = argparse.ArgumentParser(description="MedGEMMA + LoRA (Scheme B) with tunable KL and akiec boosters")
+    # Paths
+    p.add_argument("--train_csv", type=str, default=TRAIN_CSV)
+    p.add_argument("--val_csv", type=str, default=VAL_CSV)
+    p.add_argument("--test_csv", type=str, default=TEST_CSV)
+    p.add_argument("--image_root", type=str, default=IMAGE_ROOT_DIR)
+    p.add_argument("--image_ext", type=str, default=IMAGE_EXT)
+    p.add_argument("--resnet_ckpt", type=str, default=RESNET_CKPT)
+    p.add_argument("--output_dir", type=str, default=OUTPUT_DIR)
+
+    # ResNet prior text in prompt
+    p.add_argument("--use_resnet_prior", action="store_true", help="Insert ResNet prior text into prompt")
+    p.add_argument("--no_resnet_prior", action="store_true", help="Do not insert ResNet prior text into prompt")
+
+    # KL hyperparameters
+    p.add_argument("--use_resnet_kl", action="store_true", help="Enable ResNet KL consistency")
+    p.add_argument("--no_resnet_kl", action="store_true", help="Disable ResNet KL consistency")
+    p.add_argument("--resnet_kl_weight", type=float, default=RESNET_KL_WEIGHT)
+    p.add_argument("--resnet_conf_thresh", type=float, default=RESNET_CONF_THRESH)
+    p.add_argument("--kl_warmup_steps", type=int, default=KL_WARMUP_STEPS)
+    p.add_argument("--kl_soft_gate", action="store_true", help="Use soft confidence gate for KL")
+    p.add_argument("--kl_hard_gate", action="store_true", help="Use hard confidence gate for KL")
+
+    # CE hyperparameters
+    p.add_argument("--ce_label_smoothing", type=float, default=CE_LABEL_SMOOTHING)
+
+    # akiec boosters
+    p.add_argument("--akiec_logit_bias", type=float, default=AKIEC_LOGIT_BIAS)
+    p.add_argument("--akiec_ce_weight", type=float, default=AKIEC_CE_WEIGHT)
+    p.add_argument("--disable_kl_on_akiec", action="store_true", help="Disable KL for akiec samples")
+    p.add_argument("--enable_kl_on_akiec", action="store_true", help="Allow KL for akiec samples")
+
+    # Repro
+    p.add_argument("--seed", type=int, default=42)
+    return p.parse_args()
+
+
 def main():
-    set_seed(42)
+    args = parse_args()
+    set_seed(args.seed)
+
+    # ---- Apply CLI overrides to globals (keeps the rest of the file minimally changed) ----
+    global TRAIN_CSV, VAL_CSV, TEST_CSV, IMAGE_ROOT_DIR, IMAGE_EXT, RESNET_CKPT, OUTPUT_DIR
+    global USE_RESNET_PRIOR, USE_RESNET_KL, RESNET_KL_WEIGHT, RESNET_CONF_THRESH
+    global CE_LABEL_SMOOTHING, KL_WARMUP_STEPS, KL_USE_SOFT_GATE
+    global AKIEC_LOGIT_BIAS, AKIEC_CE_WEIGHT, DISABLE_KL_ON_AKIEC
+
+    TRAIN_CSV = args.train_csv
+    VAL_CSV = args.val_csv
+    TEST_CSV = args.test_csv
+    IMAGE_ROOT_DIR = args.image_root
+    IMAGE_EXT = args.image_ext
+    RESNET_CKPT = args.resnet_ckpt
+    OUTPUT_DIR = args.output_dir
+
+    if args.use_resnet_prior:
+        USE_RESNET_PRIOR = True
+    if args.no_resnet_prior:
+        USE_RESNET_PRIOR = False
+
+    if args.use_resnet_kl:
+        USE_RESNET_KL = True
+    if args.no_resnet_kl:
+        USE_RESNET_KL = False
+
+    RESNET_KL_WEIGHT = float(args.resnet_kl_weight)
+    RESNET_CONF_THRESH = float(args.resnet_conf_thresh)
+
+    CE_LABEL_SMOOTHING = float(args.ce_label_smoothing)
+    KL_WARMUP_STEPS = int(args.kl_warmup_steps)
+
+    if args.kl_hard_gate:
+        KL_USE_SOFT_GATE = False
+    if args.kl_soft_gate:
+        KL_USE_SOFT_GATE = True
+
+    AKIEC_LOGIT_BIAS = float(args.akiec_logit_bias)
+    AKIEC_CE_WEIGHT = float(args.akiec_ce_weight)
+
+    if args.disable_kl_on_akiec:
+        DISABLE_KL_ON_AKIEC = True
+    if args.enable_kl_on_akiec:
+        DISABLE_KL_ON_AKIEC = False
 
     train_csv, val_csv, test_csv = prepare_splits()
 
@@ -828,7 +955,7 @@ def main():
         logging_steps=10,
         save_steps=200,
         save_total_limit=2,
-        bf16=True,           # 如 GPU 不支持，可以改为 bf16=False, fp16=True
+        bf16=True,  # 如 GPU 不支持，可以改为 bf16=False, fp16=True
         fp16=False,
         report_to="none",
         remove_unused_columns=False,
