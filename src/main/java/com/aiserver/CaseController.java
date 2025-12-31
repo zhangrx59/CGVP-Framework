@@ -1,0 +1,27 @@
+package com.aiserver;
+
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/cases")
+public class CaseController {
+
+    private final CaseService caseService;
+
+    public CaseController(CaseService caseService) {
+        this.caseService = caseService;
+    }
+
+    // 创建病例（需要登录）
+    @PostMapping
+    public CaseDtos.CaseView create(@Valid @RequestBody CaseDtos.CreateReq req) {
+        return caseService.create(req);
+    }
+
+    // 查看病例（需要登录）
+    @GetMapping("/{id}")
+    public CaseDtos.CaseView get(@PathVariable Long id) {
+        return caseService.getById(id);
+    }
+}

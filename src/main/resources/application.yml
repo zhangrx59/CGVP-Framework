@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/ai_server?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 442202
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+
+security:
+  jwt:
+    issuer: ai-server
+    # 生产别写死；本地先这么用。至少 32 字符以上
+    secret: "CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+_CHARS________"
+    accessTokenMinutes: 120
+
+app:
+  upload:
+    base-dir: C:\Users\zhangrx59\IdeaProjects\AI-server\data\uploads
+
+
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
