@@ -8,8 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class InferenceWorker {
@@ -19,12 +18,19 @@ public class InferenceWorker {
     private final InferenceResultRepo resultRepo;
     private final CaseRepo caseRepo;
     private final CaseImageRepo imageRepo;
-    private final AiClient aiClient;
+    private final InferApiClient inferApiClient;
 
     private final String streamKey;
     private final String group;
     private final String consumer;
     private final long pollMs;
+
+    // 你要求严格字段（中文 key）必须齐全
+    private static final List<String> REQUIRED_FIELDS = List.of(
+            "年龄","性别","父籍贯","母籍贯","是否吸烟","是否饮酒","农药","皮肤癌病史","癌症病史",
+            "生活环境是否有自来水","生活环境是否有下水道","皮肤光型","区域",
+            "直径1","直径2","瘙痒","是否长大","疼痛","形态变化","出血","是否隆起"
+    );
 
     public InferenceWorker(
             RedisTemplate<String, Object> redisTemplate,
@@ -32,7 +38,7 @@ public class InferenceWorker {
             InferenceResultRepo resultRepo,
             CaseRepo caseRepo,
             CaseImageRepo imageRepo,
-            AiClient aiClient,
+            InferApiClient inferApiClient,
             @Value("${app.queue.stream}") String streamKey,
             @Value("${app.queue.group}") String group,
             @Value("${app.queue.consumer}") String consumer,
@@ -43,7 +49,7 @@ public class InferenceWorker {
         this.resultRepo = resultRepo;
         this.caseRepo = caseRepo;
         this.imageRepo = imageRepo;
-        this.aiClient = aiClient;
+        this.inferApiClient = inferApiClient;
         this.streamKey = streamKey;
         this.group = group;
         this.consumer = consumer;
@@ -52,7 +58,6 @@ public class InferenceWorker {
         ensureGroup();
     }
 
-    /** 每秒拉一次队列（后面你要更“生产”，我们会改成独立 worker 服务） */
     @Scheduled(fixedDelayString = "${app.queue.poll-ms}")
     public void poll() {
         try {
@@ -66,15 +71,20 @@ public class InferenceWorker {
 
             for (MapRecord<String, Object, Object> r : records) {
                 try {
-                    String jobIdStr = String.valueOf(r.getValue().get("jobId"));
-                    Long jobId = Long.valueOf(jobIdStr);
+                    Object jobIdObj = r.getValue().get("jobId");
+                    if (jobIdObj == null) {
+                        // 例如 init=1 这种消息，直接 ACK
+                        redisTemplate.opsForStream().acknowledge(streamKey, group, r.getId());
+                        continue;
+                    }
 
+                    Long jobId = Long.valueOf(String.valueOf(jobIdObj));
                     processJob(jobId);
 
                     // 成功才 ACK
                     redisTemplate.opsForStream().acknowledge(streamKey, group, r.getId());
                 } catch (Exception e) {
-                    // 不 ACK，让它留在 pending（后续可以做自动 reclaim/重试）
+                    // 不 ACK，让它留在 pending（后续可以做 reclaim/重试）
                     System.err.println("[WORKER] fail recordId=" + r.getId() + " err=" + e.getMessage());
                 }
             }
@@ -92,7 +102,7 @@ public class InferenceWorker {
             return;
         }
 
-        // 抢占：把 QUEUED -> RUNNING（最简版：直接改；后面我们可以做更严格的 CAS 更新）
+        // 抢占：QUEUED -> RUNNING
         job.setStatus("RUNNING");
         job.setAttemptCount(job.getAttemptCount() + 1);
         job.setStartedAt(Instant.now());
@@ -107,18 +117,18 @@ public class InferenceWorker {
             List<CaseImage> images = imageRepo.findByCaseId(caseId);
             if (images.isEmpty()) throw new IllegalArgumentException("no image uploaded");
 
-            var imagePaths = images.stream().map(CaseImage::getFilePath).toList();
+            // 取最新图片（按 id 最大）
+            CaseImage latest = images.stream()
+                    .max(Comparator.comparing(CaseImage::getId))
+                    .orElseThrow();
 
-            var caseData = new java.util.HashMap<String, Object>();
-            caseData.put("patientName", c.getPatientName());
-            caseData.put("patientSex", c.getPatientSex());
-            caseData.put("patientAge", c.getPatientAge());
-            caseData.put("chiefComplaint", c.getChiefComplaint());
-            caseData.put("history", c.getHistory());
+            String imagePath = latest.getFilePath();
 
-            AiDtos.InferReq req = new AiDtos.InferReq(job.getId(), caseId, imagePaths, caseData);
+            // 严格 meta.json：key 必须齐全，缺的填空
+            String metaJsonString = buildStrictMetaJson(c);
 
-            AiDtos.InferResp resp = aiClient.infer(req);
+            // 调 FastAPI（multipart）
+            Map<String, Object> resp = inferApiClient.inferMultipart(imagePath, metaJsonString);
 
             InferenceResult r = new InferenceResult();
             r.setJobId(job.getId());
@@ -139,9 +149,35 @@ public class InferenceWorker {
 
             System.err.println("[WORKER] job " + jobId + " FAILED: " + job.getLastError());
 
-            // 失败不抛出，让 record 留在 pending（先这样，下一步我们做重试/转死信）
             throw e;
         }
+    }
+
+    /**
+     * 你要求 meta.json 严格包含 21 个字段。
+     * 当前 Case 实体只有 patientAge/patientSex 等少量信息，所以这里做“最小可跑通”映射：
+     *  - 年龄 <- patientAge
+     *  - 性别 <- patientSex
+     *  - 其他字段暂填空字符串（但 key 必须存在）
+     *
+     * 后续你把病例表扩展字段后，只需要在这里把值补上即可。
+     */
+    private String buildStrictMetaJson(Case c) {
+        Map<String, Object> m = new LinkedHashMap<>();
+
+        // 先全部填空，保证 key 齐全
+        for (String k : REQUIRED_FIELDS) {
+            m.put(k, "");
+        }
+
+        // 再覆盖你现在有的数据
+        if (c.getPatientAge() != null) m.put("年龄", c.getPatientAge());
+        if (c.getPatientSex() != null) m.put("性别", c.getPatientSex());
+
+        // （可选）你现有 Case 里有 chiefComplaint/history，可先拼到“形态变化/区域”等字段里做联调
+        // 这里我不乱塞，保持严格字段+不擅自杜撰含义
+
+        return JsonUtil.toJson(m);
     }
 
     private void ensureGroup() {
@@ -155,7 +191,6 @@ public class InferenceWorker {
             redisTemplate.opsForStream().createGroup(streamKey, ReadOffset.latest(), group);
             System.out.println("[WORKER] created consumer group: " + group);
         } catch (Exception ignore) {
-            // group 已存在 or 其他重复创建情况
         }
     }
 }

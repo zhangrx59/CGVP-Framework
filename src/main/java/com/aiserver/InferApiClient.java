@@ -1,38 +1,58 @@
-//package com.aiserver;
-//import org.springframework.beans.factory.annotation.Value;
-//import org.springframework.core.io.ByteArrayResource;
-//import org.springframework.core.io.FileSystemResource;
-//import org.springframework.http.HttpEntity;
-//import org.springframework.http.HttpHeaders;
-//import org.springframework.http.MediaType;
-//import org.springframework.http.ResponseEntity;
-//import org.springframework.http.client.SimpleClientHttpRequestFactory;
-//import org.springframework.stereotype.Component;
-//import org.springframework.stereotype.Service;
-//import org.springframework.util.LinkedMultiValueMap;
-//import org.springframework.util.MultiValueMap;
-//import org.springframework.web.client.RestClient;
-//import org.springframework.web.client.RestTemplate;
-//
-//import java.nio.charset.StandardCharsets;
-//import java.util.Map;
+package com.aiserver;
 
-@Service
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
+
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Map;
+
+@Component
 public class InferApiClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
-    @Value("${ai.infer.baseUrl:http://127.0.0.1:8000}")
+    @Value("${app.fastapi.base-url:http://127.0.0.1:8000}")
     private String baseUrl;
 
-    // imagePath: 你本地图片绝对路径
-    // metaJsonString: 由 Case 字段拼成 JSON 字符串（必须含固定字段）
+    public InferApiClient() {
+        // 最小生产化：超时必须设置
+        SimpleClientHttpRequestFactory rf = new SimpleClientHttpRequestFactory();
+        rf.setConnectTimeout((int) Duration.ofSeconds(3).toMillis());
+        rf.setReadTimeout((int) Duration.ofSeconds(120).toMillis());
+        this.restTemplate = new RestTemplate(rf);
+    }
+
+    /**
+     * FastAPI 接口：POST /infer_multipart
+     * multipart/form-data:
+     *  - meta_json: 一个 json 文件
+     *  - image: 一张图片文件
+     *
+     * 返回 Map（建议 FastAPI 返回：predLabel + probs + 其他说明字段）
+     */
+    @SuppressWarnings("unchecked")
     public Map<String, Object> inferMultipart(String imagePath, String metaJsonString) {
+        if (imagePath == null || imagePath.isBlank()) {
+            throw new IllegalArgumentException("imagePath is blank");
+        }
+        if (metaJsonString == null || metaJsonString.isBlank()) {
+            throw new IllegalArgumentException("metaJsonString is blank");
+        }
 
-        // 1) 文件 part：图片
         FileSystemResource imageFile = new FileSystemResource(imagePath);
+        if (!imageFile.exists()) {
+            throw new IllegalArgumentException("image file not found: " + imagePath);
+        }
 
-        // 2) 文件 part：meta_json（把字符串当“文件”发过去）
+        // meta_json 作为“文件”上传
         ByteArrayResource metaFile = new ByteArrayResource(metaJsonString.getBytes(StandardCharsets.UTF_8)) {
             @Override
             public String getFilename() {
@@ -41,7 +61,14 @@ public class InferApiClient {
         };
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("meta_json", metaFile);
+
+        // meta_json part：Content-Type = application/json
+        HttpHeaders metaHeaders = new HttpHeaders();
+        metaHeaders.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<ByteArrayResource> metaPart = new HttpEntity<>(metaFile, metaHeaders);
+        body.add("meta_json", metaPart);
+
+        // image part
         body.add("image", imageFile);
 
         HttpHeaders headers = new HttpHeaders();
@@ -54,6 +81,11 @@ public class InferApiClient {
                 req,
                 Map.class
         );
-        return resp.getBody();
+
+        if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+            throw new IllegalStateException("FastAPI infer failed, status=" + resp.getStatusCode());
+        }
+
+        return (Map<String, Object>) resp.getBody();
     }
 }

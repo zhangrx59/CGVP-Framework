@@ -35,7 +35,8 @@ app:
     group: inference-workers
     consumer: worker-1
     poll-ms: 1000
-
+  fastapi:
+    base-url: http://127.0.0.1:8000
 
 management:
   endpoints:

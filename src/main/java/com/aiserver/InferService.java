@@ -1,12 +1,15 @@
 package com.aiserver;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class InferService {
@@ -14,28 +17,38 @@ public class InferService {
     private final CaseRepo caseRepo;
     private final CaseImageRepo imageRepo;
     private final InferenceJobRepo jobRepo;
-    private final InferenceResultRepo resultRepo;
-    private final AiClient aiClient;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    public InferService(CaseRepo caseRepo,
-                        CaseImageRepo imageRepo,
-                        InferenceJobRepo jobRepo,
-                        InferenceResultRepo resultRepo,
-                        AiClient aiClient) {
+    private final String streamKey;
+
+    public InferService(
+            CaseRepo caseRepo,
+            CaseImageRepo imageRepo,
+            InferenceJobRepo jobRepo,
+            RedisTemplate<String, Object> redisTemplate,
+            @Value("${app.queue.stream}") String streamKey
+    ) {
         this.caseRepo = caseRepo;
         this.imageRepo = imageRepo;
         this.jobRepo = jobRepo;
-        this.resultRepo = resultRepo;
-        this.aiClient = aiClient;
+        this.redisTemplate = redisTemplate;
+        this.streamKey = streamKey;
     }
 
+    /**
+     * 现在 runInfer 只负责：
+     * - 权限校验
+     * - 创建 job（QUEUED）
+     * - XADD 入队（jobId）
+     * 返回 job，供前端轮询 /jobs/{jobId}
+     */
     public InferenceJob runInfer(Long caseId) {
         JwtService.JwtUser me = currentUser();
 
         Case c = caseRepo.findById(caseId)
                 .orElseThrow(() -> new IllegalArgumentException("case not found"));
 
-        // ✅ 先保持最严格：只能创建者推理（后面再放宽为同科室/管理员）
+        // 仍然保持最严格：只能创建者推理（后续可扩展同科室/管理员）
         if (!c.getCreatedBy().equals(me.userId())) {
             throw new SecurityException("no permission");
         }
@@ -49,49 +62,19 @@ public class InferService {
         InferenceJob job = new InferenceJob();
         job.setCaseId(caseId);
         job.setCreatedBy(me.userId());
-        job.setStatus("RUNNING");
-        job.setAttemptCount(1);
-        job.setStartedAt(Instant.now());
+        job.setStatus("QUEUED");
+        job.setAttemptCount(0);
+        job.setLastError(null);
+        job.setStartedAt(null);
+        job.setFinishedAt(null);
         jobRepo.save(job);
 
-        try {
-            // 2) 组装 FastAPI 请求
-            var imagePaths = images.stream().map(CaseImage::getFilePath).toList();
+        // 2) 入队：写入 jobId
+        redisTemplate.opsForStream().add(
+                MapRecord.create(streamKey, Map.of("jobId", String.valueOf(job.getId())))
+        );
 
-            var caseData = new HashMap<String, Object>();
-            caseData.put("patientName", c.getPatientName());
-            caseData.put("patientSex", c.getPatientSex());
-            caseData.put("patientAge", c.getPatientAge());
-            caseData.put("chiefComplaint", c.getChiefComplaint());
-            caseData.put("history", c.getHistory());
-
-            AiDtos.InferReq req = new AiDtos.InferReq(job.getId(), caseId, imagePaths, caseData);
-
-            // 3) 调 FastAPI
-            AiDtos.InferResp resp = aiClient.infer(req);
-
-            // 4) 落结果
-            InferenceResult r = new InferenceResult();
-            r.setJobId(job.getId());
-            r.setCaseId(caseId);
-            r.setResultJson(JsonUtil.toJson(resp)); // 用我们下面的 JsonUtil
-            resultRepo.save(r);
-
-            // 5) 更新 job
-            job.setStatus("SUCCEEDED");
-            job.setFinishedAt(Instant.now());
-            job.setLastError(null);
-            jobRepo.save(job);
-
-            return job;
-
-        } catch (Exception e) {
-            job.setStatus("FAILED");
-            job.setFinishedAt(Instant.now());
-            job.setLastError(e.getClass().getSimpleName() + ": " + e.getMessage());
-            jobRepo.save(job);
-            throw e;
-        }
+        return job;
     }
 
     private JwtService.JwtUser currentUser() {
