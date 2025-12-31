@@ -26,8 +26,15 @@ security:
 app:
   upload:
     base-dir: C:\Users\zhangrx59\IdeaProjects\AI-server\data\uploads
-
-
+  ai:
+    base-url: http://127.0.0.1:8000
+    connect-timeout-ms: 3000
+    read-timeout-ms: 120000
+  queue:
+    stream: inference:jobs
+    group: inference-workers
+    consumer: worker-1
+    poll-ms: 1000
 
 
 management:
