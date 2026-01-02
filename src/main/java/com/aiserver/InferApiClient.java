@@ -12,7 +12,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Map;
 
 @Component
 public class InferApiClient {
@@ -23,23 +22,21 @@ public class InferApiClient {
     private String baseUrl;
 
     public InferApiClient() {
-        // 最小生产化：超时必须设置
         SimpleClientHttpRequestFactory rf = new SimpleClientHttpRequestFactory();
         rf.setConnectTimeout((int) Duration.ofSeconds(3).toMillis());
-        rf.setReadTimeout((int) Duration.ofSeconds(120).toMillis());
+        rf.setReadTimeout((int) Duration.ofSeconds(180).toMillis()); // 推理可能较慢
         this.restTemplate = new RestTemplate(rf);
     }
 
     /**
-     * FastAPI 接口：POST /infer_multipart
+     * 调 FastAPI：POST /infer_report_multipart_txt
      * multipart/form-data:
-     *  - meta_json: 一个 json 文件
-     *  - image: 一张图片文件
+     *  - meta_json: json 文件
+     *  - image: 图片文件
      *
-     * 返回 Map（建议 FastAPI 返回：predLabel + probs + 其他说明字段）
+     * 返回：text/plain (UTF-8) 的报告内容（多行）
      */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> inferMultipart(String imagePath, String metaJsonString) {
+    public String inferReportMultipartTxt(String imagePath, String metaJsonString) {
         if (imagePath == null || imagePath.isBlank()) {
             throw new IllegalArgumentException("imagePath is blank");
         }
@@ -55,14 +52,12 @@ public class InferApiClient {
         // meta_json 作为“文件”上传
         ByteArrayResource metaFile = new ByteArrayResource(metaJsonString.getBytes(StandardCharsets.UTF_8)) {
             @Override
-            public String getFilename() {
-                return "meta.json";
-            }
+            public String getFilename() { return "meta.json"; }
         };
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
 
-        // meta_json part：Content-Type = application/json
+        // meta_json part：Content-Type=application/json
         HttpHeaders metaHeaders = new HttpHeaders();
         metaHeaders.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<ByteArrayResource> metaPart = new HttpEntity<>(metaFile, metaHeaders);
@@ -73,19 +68,21 @@ public class InferApiClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setAccept(java.util.List.of(MediaType.TEXT_PLAIN, MediaType.ALL));
 
         HttpEntity<MultiValueMap<String, Object>> req = new HttpEntity<>(body, headers);
 
-        ResponseEntity<Map> resp = restTemplate.postForEntity(
-                baseUrl + "/infer_report_multipart",
+        ResponseEntity<String> resp = restTemplate.exchange(
+                baseUrl + "/infer_report_multipart_txt",
+                HttpMethod.POST,
                 req,
-                Map.class
+                String.class
         );
 
         if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
-            throw new IllegalStateException("FastAPI infer failed, status=" + resp.getStatusCode());
+            throw new IllegalStateException("FastAPI txt infer failed, status=" + resp.getStatusCode());
         }
 
-        return (Map<String, Object>) resp.getBody();
+        return resp.getBody();
     }
 }

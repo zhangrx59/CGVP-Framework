@@ -267,6 +267,54 @@ def _linear_logits_predict(image: Image.Image, clinical_note: str,
     return pred_label, probs
 
 
+def _build_report_json(meta: Dict[str, Any], pred_label: str, probs: Dict[str, float], clinical_note: str) -> Dict[str, Any]:
+    """
+    构建中文结构化报告
+    """
+    # 类别中文映射
+    label_map = {
+        "akiec": "光化性角化病",
+        "bcc": "基底细胞癌",
+        "nev": "痣",
+        "mel": "黑色素瘤"
+    }
+    
+    # 构建报告
+    report = {
+        "诊断结果": label_map.get(pred_label, pred_label),
+        "诊断类别": pred_label,
+        "各类别概率": {
+            label_map.get("akiec", "akiec"): round(probs.get("akiec", 0.0) * 100, 2),
+            label_map.get("bcc", "bcc"): round(probs.get("bcc", 0.0) * 100, 2),
+            label_map.get("nev", "nev"): round(probs.get("nev", 0.0) * 100, 2),
+            label_map.get("mel", "mel"): round(probs.get("mel", 0.0) * 100, 2),
+        },
+        "患者信息": {
+            "年龄": meta.get("年龄", ""),
+            "性别": meta.get("性别", ""),
+            "区域": meta.get("区域", ""),
+        },
+        "临床特征": {
+            "直径": f"{meta.get('直径1', '')} x {meta.get('直径2', '')} mm" if meta.get("直径1") and meta.get("直径2") else "",
+            "瘙痒": meta.get("瘙痒", ""),
+            "疼痛": meta.get("疼痛", ""),
+            "是否长大": meta.get("是否长大", ""),
+            "形态变化": meta.get("形态变化", ""),
+            "出血": meta.get("出血", ""),
+            "是否隆起": meta.get("是否隆起", ""),
+        },
+        "病史信息": {
+            "皮肤癌病史": meta.get("皮肤癌病史", ""),
+            "癌症病史": meta.get("癌症病史", ""),
+            "是否吸烟": meta.get("是否吸烟", ""),
+            "是否饮酒": meta.get("是否饮酒", ""),
+        },
+        "临床记录": clinical_note
+    }
+    
+    return report
+
+
 def _validate_required_fields(meta: Dict[str, Any]):
     missing = [k for k in REQUIRED_FIELDS if k not in meta]
     if missing:
@@ -322,8 +370,13 @@ async def infer_multipart(
     # 5) 推理（严格对齐 evaluate）
     pred, probs = _linear_logits_predict(pil, clinical_note, bias, thr)
 
+    # 6) 构建中文结构化报告
+    report_json = _build_report_json(meta, pred, probs, clinical_note)
+
     return {
         "predLabel": pred,
         "probs": probs,
         "clinicalNote": clinical_note,  # 方便你联调时核对对齐（上线可删）
+        "reportJson": report_json,
+        "modelVersion": "medgemma-4b-it+lora@202512"
     }

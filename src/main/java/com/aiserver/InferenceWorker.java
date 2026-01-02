@@ -127,14 +127,30 @@ public class InferenceWorker {
             // 严格 meta.json：key 必须齐全，缺的填空
             String metaJsonString = buildStrictMetaJson(c);
 
-            // 调 FastAPI（multipart）
-            Map<String, Object> resp = inferApiClient.inferMultipart(imagePath, metaJsonString);
+            // 调 FastAPI（multipart -> txt）
+                        String txt = inferApiClient.inferReportMultipartTxt(imagePath, metaJsonString);
 
-            InferenceResult r = new InferenceResult();
-            r.setJobId(job.getId());
-            r.setCaseId(caseId);
-            r.setResultJson(JsonUtil.toJson(resp));
-            resultRepo.save(r);
+            // 保存结果
+                        InferenceResult r = new InferenceResult();
+                        r.setJobId(job.getId());
+                        r.setCaseId(caseId);
+
+            // 兜底：resultJson 字段也存原文（虽然名字叫 json，但我们现在存 txt）
+                        r.setResultJson(txt);
+
+            // 从第一行解析 probs，并推断 predLabel（保持你原本字段可用）
+                        ParsedTxtReport parsed = ParsedTxtReport.parse(txt);
+                        if (parsed != null) {
+                            if (parsed.predLabel != null) r.setPredLabel(parsed.predLabel);
+                            if (parsed.probsJson != null) r.setProbsJson(parsed.probsJson);
+                        }
+
+            // reportJson 字段现在改作“报告纯文本”保存（避免 DTO 解析 JSON 失败）
+                        r.setReportJson(txt);
+
+            // modelVersion（可选）你可以在 FastAPI 文本里加版本行再解析，这里先不填
+                        resultRepo.save(r);
+
 
             job.setStatus("SUCCEEDED");
             job.setFinishedAt(Instant.now());
@@ -193,4 +209,59 @@ public class InferenceWorker {
         } catch (Exception ignore) {
         }
     }
+
+    private static class ParsedTxtReport {
+        String predLabel;   // 例如 mel
+        String probsJson;   // {"akiec":0.000003,"bcc":0.0,...}
+
+        static ParsedTxtReport parse(String txt) {
+            if (txt == null || txt.isBlank()) return null;
+
+            // 找到第一行：预测标签：{akiec:0.000003 bcc:...}
+            String[] lines = txt.split("\\r?\\n");
+            String first = null;
+            for (String ln : lines) {
+                if (ln != null && ln.trim().startsWith("预测标签")) { first = ln.trim(); break; }
+            }
+            if (first == null) return null;
+
+            int l = first.indexOf('{');
+            int r = first.lastIndexOf('}');
+            if (l < 0 || r <= l) return null;
+
+            String inside = first.substring(l + 1, r).trim(); // akiec:0.000003 bcc:0.000001 ...
+            if (inside.isBlank()) return null;
+
+            java.util.Map<String, Double> probs = new java.util.LinkedHashMap<>();
+            String[] parts = inside.split("\\s+");
+            for (String p : parts) {
+                if (p.isBlank()) continue;
+                int k = p.indexOf(':');
+                if (k <= 0) continue;
+                String key = p.substring(0, k).trim();
+                String val = p.substring(k + 1).trim();
+                try {
+                    double dv = Double.parseDouble(val);
+                    probs.put(key, dv);
+                } catch (Exception ignore) {}
+            }
+            if (probs.isEmpty()) return null;
+
+            // 取最大概率作为 predLabel
+            String best = null;
+            double bestV = -1.0;
+            for (var e : probs.entrySet()) {
+                if (e.getValue() != null && e.getValue() > bestV) {
+                    bestV = e.getValue();
+                    best = e.getKey();
+                }
+            }
+
+            ParsedTxtReport out = new ParsedTxtReport();
+            out.predLabel = best;
+            out.probsJson = JsonUtil.toJson(probs);
+            return out;
+        }
+    }
+
 }
