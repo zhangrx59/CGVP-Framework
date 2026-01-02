@@ -77,7 +77,7 @@ public class InferApiClient {
         HttpEntity<MultiValueMap<String, Object>> req = new HttpEntity<>(body, headers);
 
         ResponseEntity<Map> resp = restTemplate.postForEntity(
-                baseUrl + "/infer_multipart",
+                baseUrl + "/infer_report_multipart",
                 req,
                 Map.class
         );
