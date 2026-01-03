@@ -4,7 +4,8 @@ import Login from "./pages/Login";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import Landing from "./pages/Landing";
-
+import Register from "./pages/Register"; // ⭐ NEW
+import CaseUpload from "./pages/CaseUpload"; // ⭐ NEW
 function RequireAuth({ children }: { children: JSX.Element }) {
   const token = localStorage.getItem("token");
   if (!token) return <Navigate to="/login" replace />;
@@ -17,9 +18,14 @@ export default function App() {
       <Routes>
         {/* ✅ 新增：开场页 */}
         <Route path="/" element={<Landing />} />
-
+        <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-
+        <Route path="/cases/:id/upload"element={
+            <RequireAuth>
+              <CaseUpload />
+            </RequireAuth>
+          }
+        />
         <Route path="/cases" element={<RequireAuth><Cases /></RequireAuth>} />
         <Route path="/cases/:id" element={<RequireAuth><CaseDetail /></RequireAuth>} />
 

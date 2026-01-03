@@ -6,8 +6,21 @@ export type LoginResp = {
   token: string;
 };
 
+export type RegisterReq = {
+  username: string;
+  password: string;
+  role: "DOCTOR" | "NURSE" | "ADMIN";
+  dept?: string;
+  adminKey?: string;
+};
+
 export async function login(req: LoginReq) {
   const { data } = await http.post<LoginResp>("/auth/login", req);
+  return data;
+}
+
+export async function register(req: RegisterReq) {
+  const { data } = await http.post("/auth/register", req);
   return data;
 }
 

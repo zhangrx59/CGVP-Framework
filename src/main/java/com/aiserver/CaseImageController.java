@@ -1,5 +1,6 @@
 package com.aiserver;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,6 +14,8 @@ public class CaseImageController {
         this.imageService = imageService;
     }
 
+    // ⭐ MODIFIED：加角色限制（护士/医生/管理员都可以上传）
+    @PreAuthorize("hasAnyRole('NURSE','DOCTOR','ADMIN')")
     @PostMapping("/{caseId}/images")
     public CaseImage upload(
             @PathVariable Long caseId,
@@ -21,3 +24,4 @@ public class CaseImageController {
         return imageService.upload(caseId, file);
     }
 }
+

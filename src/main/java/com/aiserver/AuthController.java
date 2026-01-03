@@ -1,6 +1,5 @@
 package com.aiserver;
 
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -8,17 +7,18 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
     @PostMapping("/register")
-    public AuthDtos.UserView register(@Valid @RequestBody AuthDtos.RegisterReq req) {
+    public AuthDtos.UserView register(@RequestBody AuthDtos.RegisterReq req) {
         return authService.register(req);
     }
 
     @PostMapping("/login")
-    public AuthDtos.LoginResp login(@Valid @RequestBody AuthDtos.LoginReq req) {
+    public AuthDtos.LoginResp login(@RequestBody AuthDtos.LoginReq req) {
         return authService.login(req);
     }
 }

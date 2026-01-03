@@ -33,10 +33,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = auth.substring("Bearer ".length()).trim();
         try {
             var user = jwtService.parse(token);
+            // ⭐ MODIFIED：role 做一下规范化，避免出现 "doctor" / " Doctor " 导致权限失效
+            String role = user.role();
+            if (role == null) role = "";
+            role = role.trim().toUpperCase();
 
-            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.role()));
+            // ⭐ MODIFIED：role 为空时不给 authority（避免 ROLE_）
+            var authorities = role.isEmpty()
+                    ? List.<SimpleGrantedAuthority>of()
+                    : List.of(new SimpleGrantedAuthority("ROLE_" + role));
+
             var principal = user; // 直接把 JwtUser 放进去
-
             var authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
 

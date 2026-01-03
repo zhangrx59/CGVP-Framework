@@ -9,7 +9,8 @@ public class AuthDtos {
             @NotBlank String username,
             @NotBlank String password,
             @NotNull String role,   // DOCTOR/NURSE/ADMIN
-            String dept
+            String dept,
+            String adminKey
     ) {}
 
     public record LoginReq(
@@ -28,4 +29,6 @@ public class AuthDtos {
             UserView user,
             String token // 下一步加 JWT，这里先返回占位 null
     ) {}
+
+
 }

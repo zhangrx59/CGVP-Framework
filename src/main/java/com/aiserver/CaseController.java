@@ -1,6 +1,6 @@
 package com.aiserver;
 
-import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -13,13 +13,15 @@ public class CaseController {
         this.caseService = caseService;
     }
 
-    // 创建病例（需要登录）
+    // ⭐ MODIFIED：护士可以创建病例（上传病例）
+    @PreAuthorize("hasAnyRole('NURSE','DOCTOR','ADMIN')")
     @PostMapping
-    public CaseDtos.CaseView create(@Valid @RequestBody CaseDtos.CreateReq req) {
+    public CaseDtos.CaseView create(@RequestBody CaseDtos.CreateReq req) {
         return caseService.create(req);
     }
 
-    // 查看病例（需要登录）
+    // ⭐ MODIFIED：护士不能查看病例
+    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
     @GetMapping("/{id}")
     public CaseDtos.CaseView get(@PathVariable Long id) {
         return caseService.getById(id);

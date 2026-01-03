@@ -4,31 +4,67 @@ import { createCase } from "../api/cases";
 
 export default function Cases() {
   const nav = useNavigate();
-  const [chiefComplaint, setChiefComplaint] = useState("43-year-old male with a skin lesion...");
-  const [history, setHistory] = useState("");
-  const [patientSex, setPatientSex] = useState("M");
-  const [patientAge, setPatientAge] = useState<number>(43);
-  const [err, setErr] = useState<string>("");
 
-  async function onCreate() {
-    setErr("");
+  const [patientName, setPatientName] = useState("");
+  const [gender, setGender] = useState("");
+  const [age, setAge] = useState<number>(0);
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    setErr(null);
+
     try {
-      const c = await createCase({ chiefComplaint, history, patientSex, patientAge });
-      nav(`/cases/${c.id}`);
+      const role = localStorage.getItem("role") || ""; // ⭐ NEW
+
+      const c = await createCase({
+        patientName,
+        gender,
+        age,
+        chiefComplaint,
+      });
+
+      // ⭐ MODIFIED：护士创建后跳上传页；医生/管理员跳详情页
+      if (role.toUpperCase() === "NURSE") {
+        nav(`/cases/${c.id}/upload`);
+      } else {
+        nav(`/cases/${c.id}`);
+      }
     } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "创建病例失败");
+      setErr(e?.response?.data?.message || e?.message || "创建失败");
     }
   }
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <h3>新建病例</h3>
-      <input value={patientSex} onChange={(e) => setPatientSex(e.target.value)} placeholder="patientSex (M/F/U)" />
-      <input value={patientAge} type="number" onChange={(e) => setPatientAge(Number(e.target.value))} />
-      <textarea rows={3} value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
-      <textarea rows={2} value={history} onChange={(e) => setHistory(e.target.value)} />
-      <button onClick={onCreate}>创建并进入详情</button>
-      {err && <div style={{ color: "crimson" }}>{err}</div>}
+    <div style={{ maxWidth: 520 }}>
+      <h3>创建病例</h3>
+
+      <div style={{ display: "grid", gap: 8 }}>
+        <input
+          placeholder="患者姓名"
+          value={patientName}
+          onChange={(e) => setPatientName(e.target.value)}
+        />
+        <input
+          placeholder="性别"
+          value={gender}
+          onChange={(e) => setGender(e.target.value)}
+        />
+        <input
+          placeholder="年龄"
+          type="number"
+          value={age}
+          onChange={(e) => setAge(Number(e.target.value))}
+        />
+        <textarea
+          placeholder="主诉"
+          value={chiefComplaint}
+          onChange={(e) => setChiefComplaint(e.target.value)}
+        />
+        <button onClick={submit}>创建</button>
+      </div>
+
+      {err && <div style={{ color: "crimson", marginTop: 10 }}>{err}</div>}
     </div>
   );
 }
