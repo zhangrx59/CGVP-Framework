@@ -75,9 +75,19 @@ export default function Cases() {
     }
   }
 
-  return (
+
+  const role = (localStorage.getItem("role") || "").toUpperCase();
+  const canViewAll = role === "DOCTOR" || role === "ADMIN";
+ return (
     <div style={{ maxWidth: 520 }}>
       <h3>创建病例</h3>
+
+      {/* ⭐ NEW：医生/管理员入口 */}
+      {canViewAll && (
+        <div style={{ marginBottom: 10 }}>
+          <button onClick={() => nav("/cases/all")}>查看所有病例</button>
+        </div>
+      )}
 
       <div style={{ display: "grid", gap: 8 }}>
         <input
@@ -85,31 +95,24 @@ export default function Cases() {
           value={patientName}
           onChange={(e) => setPatientName(e.target.value)}
         />
-
         <input
           placeholder="性别:（男/女）"
           value={gender}
           onChange={(e) => setGender(e.target.value)}
         />
-
         <input
           placeholder="年龄："
           type="number"
-          // ⭐ MODIFIED：value 改成 string，默认空就不会显示 0
           value={age}
-          // ⭐ MODIFIED：保持字符串输入；允许用户清空
           onChange={(e) => setAge(e.target.value)}
-          // ⭐ NEW：一些输入体验优化（不影响校验）
           min={1}
           step={1}
         />
-
         <textarea
-          placeholder="病例信息（不能为空）"
+          placeholder="主诉（不能为空）"
           value={chiefComplaint}
           onChange={(e) => setChiefComplaint(e.target.value)}
         />
-
         <button onClick={submit}>创建</button>
       </div>
 

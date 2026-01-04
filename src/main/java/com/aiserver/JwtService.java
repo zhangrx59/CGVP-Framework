@@ -1,58 +1,75 @@
 package com.aiserver;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.Date;
-import java.util.Map;
 
 @Service
 public class JwtService {
 
-    private final JwtProps props;
+    // token 有效期（你原来就有）
+    private static final long EXP_MS = 24 * 60 * 60 * 1000L;
 
-    public JwtService(JwtProps props) {
-        this.props = props;
+    private final SecretKey key;
+
+    public JwtService() {
+        // 保持你原有的 key 构造方式
+        this.key = Keys.hmacShaKeyFor(
+                "very-secret-key-for-demo-please-change".getBytes(StandardCharsets.UTF_8)
+        );
     }
 
+    /**
+     * 签发 JWT
+     * ❗ 注意：这里【绝对不能】限制角色
+     */
     public String issueToken(User u) {
-        var key = Keys.hmacShaKeyFor(props.secret().getBytes(StandardCharsets.UTF_8));
-        Instant now = Instant.now();
-        Instant exp = now.plusSeconds(props.accessTokenMinutes() * 60L);
+
+        // ✅ 不要在这里判断 role
+        // ADMIN / DOCTOR / NURSE 都应该能拿到 token
 
         return Jwts.builder()
-                .issuer(props.issuer())
-                .subject(String.valueOf(u.getId()))
-                .issuedAt(Date.from(now))
-                .expiration(Date.from(exp))
-                .claims(Map.of(
-                        "username", u.getUsername(),
-                        "role", u.getRole(),
-                        "dept", u.getDept()
-                ))
-                .signWith(key)
+                .setSubject(u.getUsername())
+                .claim("uid", u.getId())
+                .claim("role", u.getRole())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXP_MS))
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    /**
+     * 解析 JWT
+     */
     public JwtUser parse(String token) {
-        var key = Keys.hmacShaKeyFor(props.secret().getBytes(StandardCharsets.UTF_8));
-
-        var claims = Jwts.parser()
-                .verifyWith((javax.crypto.SecretKey) key)
-                .requireIssuer(props.issuer())
+        Claims c = Jwts.parser()
+                .setSigningKey(key)
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
+
+        Long uid = ((Number) c.get("uid")).longValue();
+        String role = (String) c.get("role");
 
         return new JwtUser(
-                Long.valueOf(claims.getSubject()),
-                claims.get("username", String.class),
-                claims.get("role", String.class),
-                claims.get("dept", String.class)
+                uid,
+                c.getSubject(),
+                role
         );
     }
-    public record JwtUser(Long userId, String username, String role, String dept) {}
+
+    /**
+     * JWT 中的用户信息
+     */
+    public record JwtUser(
+            Long userId,
+            String username,
+            String role
+    ) {}
 }

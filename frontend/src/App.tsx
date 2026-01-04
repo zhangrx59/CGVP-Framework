@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
 import Landing from "./pages/Landing";
+import AllCases from "./pages/AllCases";
 import Register from "./pages/Register"; // ⭐ NEW
 import CaseUpload from "./pages/CaseUpload"; // ⭐ NEW
 function RequireAuth({ children }: { children: JSX.Element }) {
@@ -26,6 +27,7 @@ export default function App() {
             </RequireAuth>
           }
         />
+           <Route path="/cases/all" element={<RequireAuth><AllCases /></RequireAuth>} />
         <Route path="/cases" element={<RequireAuth><Cases /></RequireAuth>} />
         <Route path="/cases/:id" element={<RequireAuth><CaseDetail /></RequireAuth>} />
 

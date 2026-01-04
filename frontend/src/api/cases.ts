@@ -1,5 +1,6 @@
 import { http } from "./http";
 
+// 病例视图（与后端 CaseDtos.CaseView 对齐）
 export type CaseView = {
   id: number;
   patientName?: string;
@@ -7,6 +8,11 @@ export type CaseView = {
   patientAge?: number;
   chiefComplaint: string;
   history?: string;
+
+  // 后端本来就有
+  status?: string;
+  createdBy?: number;
+  dept?: string;
 };
 
 export type CreateCaseReq = {
@@ -19,6 +25,12 @@ export type CreateCaseReq = {
 
 export async function createCase(req: CreateCaseReq) {
   const { data } = await http.post<CaseView>("/cases", req);
+  return data;
+}
+
+// 获取所有病例（DOCTOR/ADMIN）
+export async function listAllCases() {
+  const { data } = await http.get<CaseView[]>("/cases");
   return data;
 }
 
