@@ -62,6 +62,25 @@ public class CaseService {
         caseRepo.deleteById(id);
     }
 
+    // ⭐ NEW：修改病例（仅 DOCTOR / ADMIN）
+    public CaseDtos.CaseView updateById(Long id, CaseDtos.UpdateReq req) {
+        ensureDoctorOrAdmin(); // ⭐ NEW：复用权限校验（你删功能里已经有/或按下面补一个）
+
+        Case c = caseRepo.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("case not found"));
+
+        // ⭐ NEW：按请求覆盖（最小化：全量覆盖，不搞复杂 patch）
+        c.setPatientName(req.patientName());
+        c.setPatientSex(req.patientSex());
+        c.setPatientAge(req.patientAge());
+        c.setChiefComplaint(req.chiefComplaint());
+        c.setHistory(req.history());
+
+        caseRepo.save(c);
+        return toView(c);
+    }
+
+
     // ⭐ NEW：查看所有病例（不限部门），仅 DOCTOR/ADMIN
     public List<CaseDtos.CaseView> listAll() {
         ensureDoctorOrAdmin(); // ⭐ NEW：权限校验

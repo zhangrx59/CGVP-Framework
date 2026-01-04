@@ -42,5 +42,10 @@ public class CaseController {
         return Map.of("ok", true);
     }
 
+    // ⭐ NEW：修改病例（DOCTOR / ADMIN）
+    @PutMapping("/{id}")
+    public CaseDtos.CaseView update(@PathVariable Long id, @jakarta.validation.Valid @RequestBody CaseDtos.UpdateReq req) {
+        return caseService.updateById(id, req);
+    }
 
 }

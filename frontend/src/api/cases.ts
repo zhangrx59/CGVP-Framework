@@ -9,7 +9,6 @@ export type CaseView = {
   chiefComplaint: string;
   history?: string;
 
-  // 后端本来就有
   status?: string;
   createdBy?: number;
   dept?: string;
@@ -39,7 +38,22 @@ export async function getCase(id: number) {
   return data;
 }
 
-// ⭐ NEW：删除病例（DOCTOR/ADMIN）
+// ⭐ NEW：修改病例（DOCTOR/ADMIN）
+export type UpdateCaseReq = {
+  patientName?: string;
+  patientSex?: string;
+  patientAge?: number;
+  chiefComplaint: string;
+  history?: string;
+};
+
+// ⭐ NEW：PUT /cases/{id}
+export async function updateCase(id: number, req: UpdateCaseReq) {
+  const { data } = await http.put<CaseView>(`/cases/${id}`, req);
+  return data;
+}
+
+// ⭐ 已实现：删除病例（DOCTOR/ADMIN）
 export async function deleteCase(id: number) {
   const { data } = await http.delete(`/cases/${id}`);
   return data as { ok: boolean };
