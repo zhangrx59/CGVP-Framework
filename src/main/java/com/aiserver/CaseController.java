@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/cases")
 public class CaseController {
@@ -32,4 +34,13 @@ public class CaseController {
     public List<CaseDtos.CaseView> listAll() {
         return caseService.listAll();
     }
+
+    // ⭐ NEW：删除病例（DOCTOR / ADMIN）
+    @DeleteMapping("/{id}")
+    public Map<String, Object> delete(@PathVariable Long id) {
+        caseService.deleteById(id);
+        return Map.of("ok", true);
+    }
+
+
 }

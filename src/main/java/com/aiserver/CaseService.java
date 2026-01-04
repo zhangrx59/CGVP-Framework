@@ -49,6 +49,19 @@ public class CaseService {
         return toView(c);
     }
 
+    // ⭐ NEW：删除病例（仅 DOCTOR / ADMIN）
+    public void deleteById(Long id) {
+        // ⭐ NEW：权限校验
+        ensureDoctorOrAdmin();
+
+        // ⭐ NEW：存在性检查（沿用你现在 getById 的 “case not found” 风格）
+        if (!caseRepo.existsById(id)) {
+            throw new IllegalArgumentException("case not found");
+        }
+
+        caseRepo.deleteById(id);
+    }
+
     // ⭐ NEW：查看所有病例（不限部门），仅 DOCTOR/ADMIN
     public List<CaseDtos.CaseView> listAll() {
         ensureDoctorOrAdmin(); // ⭐ NEW：权限校验

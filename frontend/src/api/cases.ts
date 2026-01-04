@@ -39,6 +39,12 @@ export async function getCase(id: number) {
   return data;
 }
 
+// ⭐ NEW：删除病例（DOCTOR/ADMIN）
+export async function deleteCase(id: number) {
+  const { data } = await http.delete(`/cases/${id}`);
+  return data as { ok: boolean };
+}
+
 // 上传图片：后端字段名必须是 file
 export async function uploadCaseImage(caseId: number, file: File) {
   const fd = new FormData();
