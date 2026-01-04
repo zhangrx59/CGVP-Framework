@@ -13,11 +13,135 @@
 html, body { height: 100%; }
 body {
   margin: 0;
-  color: var(--text);
-  background: radial-gradient(1200px 800px at 20% 10%, #1b2a6b 0%, transparent 60%),
-              radial-gradient(1000px 700px at 80% 20%, #4a185b 0%, transparent 55%),
-              var(--bg);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+
+  /* 深空多层渐变：主青蓝 + 辅紫 */
+  background:
+    radial-gradient(circle at 50% 30%,
+      rgba(80, 220, 255, 0.22),
+      rgba(40, 120, 255, 0.10) 35%,
+      rgba(10, 15, 40, 0.96) 72%),
+    radial-gradient(circle at 82% 22%,
+      rgba(190, 120, 255, 0.16),
+      rgba(0,0,0,0) 48%),
+    radial-gradient(circle at 18% 80%,
+      rgba(0, 255, 200, 0.10),
+      rgba(0,0,0,0) 55%),
+    linear-gradient(135deg,
+      #050914 0%,
+      #07122a 28%,
+      #081b3f 52%,
+      #170f3d 75%,
+      #220a1f 100%);
+
+  color: rgba(255,255,255,0.92);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 2) 透视网格：强科技感（但透明度可控） */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+
+  /* 两组网格：横线 + 竖线 */
+  background-image:
+    /* 竖向网格 */
+    linear-gradient(to right,
+      rgba(0, 255, 220, 0.10) 1px,
+      rgba(0, 0, 0, 0) 1px),
+    /* 横向网格 */
+    linear-gradient(to bottom,
+      rgba(80, 220, 255, 0.10) 1px,
+      rgba(0, 0, 0, 0) 1px);
+
+  /* 网格密度（可调：越小越密） */
+  background-size: 70px 70px, 70px 70px;
+
+  /* 透视变换：让网格有“空间深度” */
+  transform-origin: center top;
+  transform: perspective(800px) rotateX(62deg) translateY(-140px) scale(1.25);
+
+  /* 让网格下半部分更明显、上半部分更淡 */
+  mask-image: linear-gradient(to bottom,
+    rgba(0,0,0,0.0) 0%,
+    rgba(0,0,0,0.55) 18%,
+    rgba(0,0,0,1.0) 70%);
+  opacity: 0.55;
+
+  /* 叠加方式更科幻 */
+  mix-blend-mode: screen;
+
+  /* 轻微模糊更像光栅 */
+  filter: blur(0.2px);
+}
+
+/* 3) 扫描光：顶部到下方循环扫过（夸张一点） */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -40% -20%;
+  pointer-events: none;
+
+  /* 扫描光带 + 少量噪声 */
+  background:
+    /* 扫描光主带 */
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 30%,
+      rgba(0, 255, 220, 0.10) 45%,
+      rgba(120, 220, 255, 0.28) 50%,
+      rgba(0, 255, 220, 0.10) 55%,
+      rgba(0,0,0,0) 70%
+    ),
+    /* 细条纹（显示器扫描感） */
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.03) 0px,
+      rgba(255,255,255,0.03) 1px,
+      rgba(0,0,0,0) 3px,
+      rgba(0,0,0,0) 6px
+    );
+
+  mix-blend-mode: screen;
+  opacity: 0.10;
+
+  /* 动画：整体往下扫 */
+  animation: scanSweep 5.0s linear infinite;
+}
+
+/* 扫描动画 */
+@keyframes scanSweep {
+  0%   { transform: translateY(-28%); }
+  100% { transform: translateY(28%); }
+}
+
+/* ===== 可选：让主要内容更“发光”一点（标题/按钮会更科幻） ===== */
+
+/* 标题微光（不想要可删） */
+h1, h2, h3 {
+  text-shadow:
+    0 0 18px rgba(80, 220, 255, 0.20),
+    0 0 40px rgba(190, 120, 255, 0.10);
+}
+
+/* 如果你用了我前面那套 landing-btn：再增强一点点科幻边缘光 */
+.landing-btn {
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 220, 0.10) inset,
+    0 10px 22px rgba(0,0,0,0.25);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.14);
+}
+
+.landing-btn:hover,
+.landing-btn:focus-visible {
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 220, 0.22) inset,
+    0 0 22px rgba(80, 220, 255, 0.18),
+    0 14px 28px rgba(0,0,0,0.30);
 }
 
 a { color: inherit; text-decoration: none; opacity: 0.9; }
@@ -155,3 +279,26 @@ pre.report {
   font-size: 14px;
 }
 .kv b { color: rgba(255,255,255,0.9); }
+
+
+/* ⭐ Landing 页面按钮：轻微 hover 动效（科研风，不浮夸） */
+.landing-btn {
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+/* hover / focus 都生效，键盘用户也友好 */
+.landing-btn:hover,
+.landing-btn:focus-visible {
+  background-color: rgba(255, 255, 255, 0.12); /* 轻微提亮 */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);  /* 柔和阴影 */
+  transform: translateY(-2px);                /* 轻微上浮 */
+}
+
+/* 按下时稍微回落，增强手感 */
+.landing-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}

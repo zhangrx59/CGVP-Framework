@@ -203,7 +203,7 @@ export default function CaseDetail() {
                   {caze.patientSex ?? "?"} / {caze.patientAge ?? "?"}
                 </span>
 
-                <b>主诉</b>
+                <b>基本信息</b>
                 <span>{caze.chiefComplaint}</span>
 
                 <b>病史</b>
@@ -232,7 +232,7 @@ export default function CaseDetail() {
                   />
                 </span>
 
-                <b>主诉</b>
+                <b>基本信息</b>
                 <span>
                   <textarea value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
                 </span>

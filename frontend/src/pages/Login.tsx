@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
-import { setAuthToken } from "../api/http";
 
 export default function Login() {
   const nav = useNavigate();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -14,13 +14,11 @@ export default function Login() {
     setErr(null);
 
     try {
-      const data = await login({ username, password });
-
-      // ⭐ MODIFIED：保存 token + role（用于前端分流）
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.user.role); // ⭐ NEW
-      setAuthToken(data.token);
-
+      const resp = await login({ username, password });
+      localStorage.setItem("token", resp.token);
+      localStorage.setItem("role", resp.user.role);
+      localStorage.setItem("userId", String(resp.user.id));
+      localStorage.setItem("username", resp.user.username);
       nav("/cases");
     } catch (e: any) {
       setErr(e?.response?.data?.message || e?.message || "登录失败");
@@ -28,25 +26,40 @@ export default function Login() {
   }
 
   return (
-    <div style={{ maxWidth: 420 }}>
-      <h3>登录</h3>
+    <div
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        paddingTop: 40, // ⭐ MODIFIED：留出上方 Header 的空间
+      }}
+    >
+      {/* ⭐ MODIFIED：删除“中间的大标题”，只保留 Header 上的标题 */}
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 8 }}>
-        <input
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="username"
-        />
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="password"
-          type="password"
-        />
-        <button type="submit">登录</button>
-      </form>
+      <div style={{ width: 420 }}>
+        <h3 style={{ marginBottom: 20 }}>登录</h3>
 
-      {err && <div style={{ color: "crimson", marginTop: 8 }}>{err}</div>}
+        <form onSubmit={onSubmit} style={{ display: "grid", gap: 14 }}>
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="用户名"
+          />
+
+          <input
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="密码"
+            type="password"
+          />
+
+          <button type="submit">登录</button>
+        </form>
+
+      </div>
     </div>
   );
 }

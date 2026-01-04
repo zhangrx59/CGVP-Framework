@@ -1,39 +1,89 @@
 import { useNavigate } from "react-router-dom";
-import { setAuthToken } from "../api/http";
 
 export default function Landing() {
   const nav = useNavigate();
 
-  function onLogout() {
-    const ok = window.confirm("确定退出登录？");
-    if (!ok) return;
-
+  function logout() {
     localStorage.removeItem("token");
-    localStorage.removeItem("role"); // ⭐ NEW：顺带清掉 role
-    setAuthToken(null);
+    localStorage.removeItem("role");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("username");
     nav("/");
   }
 
   return (
-    <div style={{ display: "grid", placeItems: "center", minHeight: "70vh" }}>
-      <div style={{ width: "min(720px, 92vw)" }}>
-        <div className="card">
-          <div style={{ fontSize: 20, fontWeight: 900 }}>
-            大模型赋能的皮肤病诊断系统
-          </div>
+    <div
+      style={{
+        minHeight: "60vh",
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+        padding: 24,
+      }}
+    >
+      {/* ⭐ 标题：居中 + 更大 */}
+      <div
+        style={{
+          textAlign: "center",
+          fontSize: 42,          // 字体明显加大
+          fontWeight: 800,
+          letterSpacing: 1,
+          color: "rgba(255,255,255,0.96)",
+        }}
+      >
+        大模型赋能的皮肤病诊断系统
+      </div>
 
-          <div style={{ height: 14 }} />
+      {/* ⭐ 按钮区域：与标题距离加大 */}
+      <div
+        style={{
+          marginTop: 60,        // 与 title 的距离明显加大
+          display: "flex",
+          gap: 36,              // 按钮之间距离加大
+        }}
+      >
+        <button
+          className="landing-btn"
+          onClick={() => nav("/login")}
+          style={{
+            padding: "14px 34px",
+            fontSize: 18,
+            borderRadius: 16,
+          }}
+        >
+          登录
+        </button>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button onClick={() => nav("/login")}>登录</button>
-            <button onClick={() => nav("/register")}>注册</button>
-            <button onClick={onLogout}>退出</button>
-          </div>
+        <button
+          className="landing-btn"
+          onClick={() => nav("/register")}
+          style={{
+            padding: "14px 34px",
+            fontSize: 18,
+            borderRadius: 16,
+          }}
+        >
+          注册
+        </button>
 
-          <div className="muted" style={{ marginTop: 18, fontWeight: 800, fontSize: 13 }}>
-            免责声明：本系统输出仅用于临床决策支持参考，不能替代医生诊断。
-          </div>
-        </div>
+      </div>
+
+      {/* ⭐ 免责声明：整个页面左下角 */}
+      <div
+        style={{
+          position: "fixed",
+          left: 24,
+          bottom: 20,
+          fontSize: 16,
+          fontWeight: 600,
+          color: "rgba(255,255,255,0.7)",
+          lineHeight: 1.5,
+        }}
+      >
+        免责声明：本系统输出仅用于临床决策支持参考，不能替代医生诊断。
       </div>
     </div>
   );

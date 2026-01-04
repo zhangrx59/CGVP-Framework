@@ -61,7 +61,7 @@ export default function AllCases() {
 
   return (
     <div style={{ maxWidth: 900 }}>
-      <h3>所有病例（医生/管理员）</h3>
+      <h3>所有病例</h3>
 
       <div style={{ display: "grid", gap: 10 }}>
         {items.map((c) => (
@@ -101,7 +101,7 @@ export default function AllCases() {
             </div>
 
             <div style={{ marginTop: 8 }}>
-              <b>主诉：</b>
+              <b>基本信息：</b>
               {c.chiefComplaint}
             </div>
           </div>
