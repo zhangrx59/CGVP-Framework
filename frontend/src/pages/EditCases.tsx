@@ -1,20 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { listAllCases, deleteCase } from "../api/cases"; // ⭐ MODIFIED：引入 deleteCase
-import type { CaseView } from "../api/cases"; // ✅ type-only
+import { listAllCases } from "../api/cases";
+import { deleteCase } from "../api/cases";
+import type { CaseView } from "../api/cases";
 
-export default function AllCases() {
+export default function ModifyCases() {
   const nav = useNavigate();
   const [items, setItems] = useState<CaseView[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const role = (localStorage.getItem("role") || "").toUpperCase();
-  const canDelete = role === "DOCTOR" || role === "ADMIN"; // ⭐ NEW
+  const canEdit = role === "DOCTOR" || role === "ADMIN";
+  const canDelete = role === "DOCTOR" || role === "ADMIN";
 
   useEffect(() => {
     if (role !== "DOCTOR" && role !== "ADMIN") {
-      setErr("无权限：只有医生/管理员可以查看所有病例");
+      setErr("无权限：只有医生/管理员可以修改病例");
       setLoading(false);
       return;
     }
@@ -32,26 +34,24 @@ export default function AllCases() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ⭐ NEW：删除逻辑（最小化，不引入额外状态管理）
   async function onDelete(id: number) {
     const ok = window.confirm(`确认删除病例 #${id} 吗？此操作不可恢复。`);
     if (!ok) return;
 
     try {
       await deleteCase(id);
-      // ⭐ NEW：本地移除，避免重新请求
       setItems((prev) => prev.filter((x) => x.id !== id));
     } catch (e: any) {
       setErr(e?.response?.data?.message || e?.message || "删除失败");
     }
   }
 
-  if (loading) return <div>加载中...</div>;
+  if (loading) return <div>加载中.</div>;
 
   if (err) {
     return (
       <div style={{ maxWidth: 720 }}>
-        <h3>所有病例</h3>
+        <h3>修改病例</h3>
         <div style={{ color: "crimson" }}>{err}</div>
         <div style={{ height: 12 }} />
         <button onClick={() => nav("/cases")}>返回</button>
@@ -61,7 +61,7 @@ export default function AllCases() {
 
   return (
     <div style={{ maxWidth: 900 }}>
-      <h3>所有病例</h3>
+      <h3>修改病例</h3>
 
       <div style={{ display: "grid", gap: 10 }}>
         {items.map((c) => (
@@ -69,24 +69,45 @@ export default function AllCases() {
             key={c.id}
             className="card"
             style={{ cursor: "pointer" }}
-            onClick={() => nav(`/cases/${c.id}`)}
+            onClick={() => nav(`/cases/${c.id}`)} // 保持“查看详情”行为不变
           >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
               <div style={{ fontWeight: 900 }}>
                 #{c.id} {c.patientName || "(未填写姓名)"}
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <div className="muted" style={{ fontSize: 12, opacity: 0.85 }}>
-                  {c.dept ? `科室：${c.dept}` : ""} {c.status ? `  状态：${c.status}` : ""}
+                  {c.dept ? `科室：${c.dept}` : ""}{" "}
+                  {c.status ? `  状态：${c.status}` : ""}
                 </div>
 
-                {/* ⭐ NEW：删除按钮，仅 DOCTOR/ADMIN */}
+                {/* ⭐ NEW：修改按钮（最小化增加） */}
+                {canEdit && (
+                  <button
+                    style={{ padding: "6px 10px" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      nav(`/cases/${c.id}/edit`);
+                    }}
+                  >
+                    修改
+                  </button>
+                )}
+
+                {/* 删除按钮保持一致 */}
                 {canDelete && (
                   <button
                     style={{ padding: "6px 10px" }}
                     onClick={(e) => {
-                      e.stopPropagation(); // ⭐ NEW：防止触发行点击跳转
+                      e.stopPropagation();
                       onDelete(c.id);
                     }}
                   >
@@ -105,13 +126,11 @@ export default function AllCases() {
               {c.chiefComplaint}
             </div>
 
-            {/* ⭐ NEW：显示病史（history） */}
+            {/* 你之前提到“病史要显示”，这里也顺手保持一致（如果不想要可删这一段） */}
             <div style={{ marginTop: 6 }}>
-            <b>病史：</b>
-            {c.history ? c.history : "—"}
-             </div>
-
-
+              <b>病史：</b>
+              {c.history ?? "-"}
+            </div>
           </div>
         ))}
       </div>

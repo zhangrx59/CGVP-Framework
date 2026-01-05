@@ -14,6 +14,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   // ✅ Landing 页面：只要中间卡片
   const isLanding = loc.pathname === "/";
 
+  // ⭐ NEW：是否在业务首页 /cases（或其子路由）
+  const inCasesModule = loc.pathname.startsWith("/cases");
+  const isCasesHome = loc.pathname === "/cases";
+
   function logout() {
     localStorage.removeItem("token");
     setAuthToken(null);
@@ -31,24 +35,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {!isLanding && (
         <>
           <div className="topbar">
-            {/* ⭐ MODIFIED：左侧占位，保证 brand 真正居中 */}
+            {/* 左侧占位，保证 brand 真正居中 */}
             <div style={{ width: 110 }} />
 
-            {/* ⭐ MODIFIED：标题放在 topbar 正中 + 字体加大 */}
+            {/* 标题放在 topbar 正中 */}
             <div
               className="brand"
               style={{
-                flex: 1,                 // ⭐ NEW：占据中间空间
-                textAlign: "center",     // ⭐ NEW：居中
-                fontSize: 32,            // ⭐ MODIFIED：适当加大（可调 24/26）
-                fontWeight: 900,         // ⭐ MODIFIED：更有力量
+                flex: 1,
+                textAlign: "center",
+                fontSize: 32,
+                fontWeight: 900,
                 letterSpacing: 0.6,
               }}
             >
               大模型赋能的皮肤病诊断系统
             </div>
 
-            {/* ⭐ MODIFIED：右侧操作区固定宽度，避免把标题挤偏 */}
+            {/* 右侧操作区固定宽度，避免把标题挤偏 */}
             <div
               style={{
                 width: 150,
@@ -58,49 +62,55 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 gap: 15,
               }}
             >
-            {token ? (
-              <>
-                {/* ⭐ MODIFIED：病例 -> 返回 */}
-                <Link to="/cases" style={active("/cases")}>
-                  返回
-                </Link>
+              {token ? (
+                <>
+                  {/* ⭐ MODIFIED：返回逻辑修复
+                      - 仅在 cases 模块内且不在 /cases 首页时显示“返回”
+                      - 点击永远回到 /cases（业务首页），不依赖 history
+                   */}
+                  {inCasesModule && !isCasesHome && (
+                    <span
+                      onClick={() => nav("/cases")}
+                      style={{
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        opacity: 1,
+                      }}
+                    >
+                      返回
+                    </span>
+                  )}
 
-                {/* ⭐ MODIFIED：退出改成和 Link 一样的下划线风格 */}
-                <span
-                  onClick={logout}
-                  style={{
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    opacity: 1,
-                  }}
-                >
-                  退出
-                </span>
-              </>
-            ) : (
+                  {/* 退出保持不变 */}
+                  <span
+                    onClick={logout}
+                    style={{
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      opacity: 1,
+                    }}
+                  >
+                    退出
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" style={active("/login")}>
+                    登录
+                  </Link>
 
-              // ⭐ MODIFIED：未登录时显示：登录 / 注册 / 返回
-              <>
-                <Link to="/login" style={active("/login")}>
-                  登录
-                </Link>
+                  <Link to="/register" style={active("/register")}>
+                    注册
+                  </Link>
 
-                {/* ⭐ NEW：注册 */}
-                <Link to="/register" style={active("/register")}>
-                  注册
-                </Link>
-
-                {/* ⭐ NEW：返回（回到 Landing 首页） */}
-                <Link to="/" style={active("/")}>
-                  返回
-                </Link>
-              </>
-            )}
-
+                  <Link to="/" style={active("/")}>
+                    返回
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
-          {/* ⭐ MODIFIED：缩短 topbar 与页面内容距离（原来 14） */}
           <div style={{ height: 6 }} />
         </>
       )}
@@ -111,7 +121,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* ✅ 非 Landing 页面：显示底部免责声明 */}
       {!isLanding && (
         <>
-          {/* ⭐ MODIFIED：缩短页面内容与免责声明距离（原来 10） */}
           <div style={{ height: 0 }} />
           <div
             className="muted"
@@ -128,7 +137,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             免责声明：本系统输出仅用于临床决策支持参考，不能替代医生诊断。
           </div>
 
-            {/* ⭐ NEW：登录后右下角问候语 */}
+          {/* 登录后右下角问候语 */}
           {token && username && roleCN && (
             <div
               style={{

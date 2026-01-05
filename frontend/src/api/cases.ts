@@ -1,5 +1,15 @@
 import { http } from "./http";
 
+
+// ⭐ NEW：带 token 拉取图片二进制（解决 <img> 不带 Authorization 的问题）
+export async function fetchCaseImageBlob(caseId: number, imageId: number): Promise<Blob> {
+  const r = await http.get(`/cases/${caseId}/images/${imageId}/raw`, {
+    responseType: "blob",
+  });
+  return r.data;
+}
+
+
 // 病例视图（与后端 CaseDtos.CaseView 对齐）
 export type CaseView = {
   id: number;
@@ -21,6 +31,20 @@ export type CreateCaseReq = {
   chiefComplaint: string;
   history?: string;
 };
+
+export type CaseImageView = {
+  id: number;
+  caseId: number;
+  fileName?: string;
+  contentType?: string;
+  fileSize?: number;
+};
+
+export async function listCaseImages(caseId: number): Promise<CaseImageView[]> {
+  const r = await http.get(`/cases/${caseId}/images`);
+  return r.data;
+}
+
 
 export async function createCase(req: CreateCaseReq) {
   const { data } = await http.post<CaseView>("/cases", req);
@@ -46,6 +70,7 @@ export type UpdateCaseReq = {
   chiefComplaint: string;
   history?: string;
 };
+
 
 // ⭐ NEW：PUT /cases/{id}
 export async function updateCase(id: number, req: UpdateCaseReq) {

@@ -6,3 +6,4 @@ import java.util.List;
 public interface CaseImageRepo extends JpaRepository<CaseImage, Long> {
     List<CaseImage> findByCaseId(Long caseId);
 }
+

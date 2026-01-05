@@ -1,286 +1,317 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import {
-  deleteCase, // ✅ 你已实现
   getCase,
-  updateCase, // ⭐ NEW
-  uploadCaseImage,
+  listCaseImages,
+  fetchCaseImageBlob,
+  type CaseView,
+  type CaseImageView,
 } from "../api/cases";
-import { getInferenceByJobId, getJob, startInfer } from "../api/infer";
-import ReportViewer from "../components/ReportViewer";
+
+import { startInfer, getJob, getInferenceByJobId } from "../api/infer";
+import type { InferenceJob, InferenceResultView } from "../api/infer";
 import StatusBadge from "../components/StatusBadge";
+import ReportViewer from "../components/ReportViewer";
 
 export default function CaseDetail() {
   const { id } = useParams();
   const caseId = useMemo(() => Number(id), [id]);
   const nav = useNavigate();
 
-  const [caze, setCaze] = useState<any>(null);
-  const [file, setFile] = useState<File | null>(null);
-
-  const [jobId, setJobId] = useState<number | null>(null);
-  const [status, setStatus] = useState<string>("");
-  const [err, setErr] = useState<string>("");
-  const [reportText, setReportText] = useState<string>("");
-
-  // ⭐ NEW：角色判断（只影响按钮显示，后端仍会做 403 校验）
   const role = (localStorage.getItem("role") || "").toUpperCase();
-  const canEdit = role === "DOCTOR" || role === "ADMIN";
-  const canDelete = role === "DOCTOR" || role === "ADMIN";
+  const canInfer = role === "DOCTOR" || role === "ADMIN";
 
-  // ⭐ NEW：编辑状态 + 表单字段
-  const [editing, setEditing] = useState(false);
-  const [patientName, setPatientName] = useState("");
-  const [patientSex, setPatientSex] = useState("");
-  const [patientAge, setPatientAge] = useState<string>(""); // 用 string 避免默认 0
-  const [chiefComplaint, setChiefComplaint] = useState("");
-  const [history, setHistory] = useState("");
+  const [caze, setCaze] = useState<CaseView | null>(null);
+  const [images, setImages] = useState<CaseImageView[]>([]);
+  const [imgUrls, setImgUrls] = useState<Record<number, string>>({});
 
-  // 加载病例
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  // ⭐ NEW：推理相关状态
+  const [job, setJob] = useState<InferenceJob | null>(null);
+  const [inferErr, setInferErr] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const [result, setResult] = useState<InferenceResultView | null>(null);
+
+  // ✅ 1) 加载病例详情 + 图片列表
   useEffect(() => {
-    (async () => {
-      try {
-        const c = await getCase(caseId);
-        setCaze(c);
+    if (!Number.isFinite(caseId) || caseId <= 0) {
+      setErr("病例 ID 非法");
+      setLoading(false);
+      return;
+    }
 
-        // ⭐ NEW：把数据灌入表单（便于编辑）
-        setPatientName(c.patientName || "");
-        setPatientSex(c.patientSex || "");
-        setPatientAge(c.patientAge == null ? "" : String(c.patientAge));
-        setChiefComplaint(c.chiefComplaint || "");
-        setHistory(c.history || "");
+    (async () => {
+      setErr(null);
+      setLoading(true);
+      try {
+        const [c, imgs] = await Promise.all([getCase(caseId), listCaseImages(caseId)]);
+        setCaze(c);
+        setImages(imgs || []);
       } catch (e: any) {
-        setErr(e?.message || "获取病例失败");
+        setErr(e?.response?.data?.message || e?.message || "加载失败");
+      } finally {
+        setLoading(false);
       }
     })();
   }, [caseId]);
 
-  // 上传图片
-  async function onUpload() {
-    if (!file) return alert("请选择图片");
-    setErr("");
-    try {
-      await uploadCaseImage(caseId, file);
-      alert("上传成功");
-    } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "上传失败");
-    }
-  }
-
-  // 开始推理
-  async function onInfer() {
-    setErr("");
-    setReportText("");
-    try {
-      const resp = await startInfer(caseId);
-      setJobId(resp.jobId);
-      setStatus(resp.status);
-    } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "启动推理失败");
-    }
-  }
-
-  // ⭐ NEW：保存修改（PUT /cases/{id}）
-  async function onSaveEdit() {
-    setErr("");
-
-    // 最小前端防呆：跟你创建病例那块风格一致
-    const sex = patientSex.trim();
-    if (sex !== "男" && sex !== "女") return setErr("性别只能是男或女");
-
-    const ageNum = Number(patientAge);
-    if (!Number.isInteger(ageNum) || ageNum <= 0) return setErr("年龄必须为正整数");
-
-    if (!chiefComplaint.trim()) return setErr("主诉不能为空");
-
-    try {
-      const updated = await updateCase(caseId, {
-        patientName: patientName.trim() || undefined,
-        patientSex: sex,
-        patientAge: ageNum,
-        chiefComplaint: chiefComplaint.trim(),
-        history: history.trim() || undefined,
-      });
-
-      setCaze(updated); // ⭐ NEW：用后端回包刷新视图
-      setEditing(false);
-      alert("修改成功");
-    } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "修改失败");
-    }
-  }
-
-  // 删除病例（你已实现，这里只是放进完整文件里）
-  async function onDelete() {
-    if (!canDelete) return;
-    const ok = window.confirm(`确认删除病例 #${caseId} 吗？此操作不可恢复。`);
-    if (!ok) return;
-
-    setErr("");
-    try {
-      await deleteCase(caseId);
-      alert("删除成功");
-      nav("/cases/all");
-    } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "删除失败");
-    }
-  }
-
-  // 轮询 job 状态
+  // ✅ 2) 图片：blob URL
   useEffect(() => {
-    if (!jobId) return;
+    const cleanup = (m: Record<number, string>) => {
+      Object.values(m).forEach((u) => {
+        try {
+          URL.revokeObjectURL(u);
+        } catch {
+          // ignore
+        }
+      });
+    };
 
-    let stop = false;
-    const timer = setInterval(async () => {
-      if (stop) return;
+    if (!images || images.length === 0) {
+      setImgUrls((prev) => {
+        cleanup(prev);
+        return {};
+      });
+      return;
+    }
+
+    let alive = true;
+
+    (async () => {
+      const next: Record<number, string> = {};
+      for (const img of images) {
+        try {
+          const blob = await fetchCaseImageBlob(caseId, img.id);
+          next[img.id] = URL.createObjectURL(blob);
+        } catch {
+          // 单张失败不影响其它
+        }
+      }
+
+      if (!alive) {
+        cleanup(next);
+        return;
+      }
+
+      setImgUrls((prev) => {
+        cleanup(prev);
+        return next;
+      });
+    })();
+
+    return () => {
+      alive = false;
+      setImgUrls((prev) => {
+        cleanup(prev);
+        return {};
+      });
+    };
+  }, [caseId, images]);
+
+  // ⭐ NEW：轮询推理任务
+  useEffect(() => {
+    if (!job?.id) return;
+
+    let alive = true;
+
+    const tick = async () => {
       try {
-        const j = await getJob(jobId);
-        setStatus(j.status);
+        const j = await getJob(job.id);
+        if (!alive) return;
+        setJob(j);
 
         if (j.status === "SUCCEEDED") {
-          stop = true;
-          clearInterval(timer);
-          const r = await getInferenceByJobId(jobId);
-          setReportText(r.reportText || r.rawResult || "");
-        }
-
-        if (j.status === "FAILED") {
-          stop = true;
-          clearInterval(timer);
-          setErr(j.lastError || "推理失败");
+          const r = await getInferenceByJobId(j.id);
+          if (!alive) return;
+          setResult(r);
         }
       } catch (e: any) {
-        setErr(e?.message || "轮询失败");
+        if (!alive) return;
+        setInferErr(e?.response?.data?.message || e?.message || "轮询任务失败");
       }
+    };
+
+    tick();
+
+    const t = window.setInterval(() => {
+      if (job.status === "RUNNING" || job.status === "QUEUED") tick();
     }, 1200);
 
     return () => {
-      stop = true;
-      clearInterval(timer);
+      alive = false;
+      window.clearInterval(t);
     };
-  }, [jobId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [job?.id]);
+
+  // ⭐ NEW：点击推理
+  async function onStartInfer() {
+    if (!canInfer) return;
+
+    setInferErr(null);
+    setStarting(true);
+    setResult(null);
+
+    try {
+      const resp = await startInfer(caseId); // POST /cases/{id}/infer
+      setJob({ id: resp.jobId, caseId, status: resp.status });
+    } catch (e: any) {
+      setInferErr(e?.response?.data?.message || e?.message || "发起推理失败");
+    } finally {
+      setStarting(false);
+    }
+  }
+
+  if (loading) return <div>加载中...</div>;
+
+  if (err) {
+    return (
+      <div style={{ maxWidth: 820 }}>
+        <h3>查看病例</h3>
+        <div style={{ color: "crimson" }}>{err}</div>
+        <div style={{ height: 12 }} />
+        <button onClick={() => nav("/cases/all")}>返回</button>
+      </div>
+    );
+  }
+
+  if (!caze) return null;
+
+  const reportText = result?.reportText || result?.rawResult || "";
 
   return (
-    <div className="grid">
-      {/* 病例信息卡片 */}
-      <div className="card">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              病例详情
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>Case #{caseId}</div>
-          </div>
+    <div style={{ maxWidth: 980 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <h3 style={{ margin: 0 }}>查看病例 #{caze.id}</h3>
 
-          <div className="row">
-            <span className="muted">推理状态</span>
-            <StatusBadge status={status} />
-          </div>
-        </div>
+        {/* ✅ 右上角：返回列表 + 推理按钮（符合你要求） */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button onClick={() => nav("/cases/all")}>返回列表</button>
 
-        {/* ⭐ NEW：编辑/删除入口（仅 DOCTOR/ADMIN） */}
-        <div style={{ marginTop: 10 }} className="row" >
-          {canEdit && !editing && <button onClick={() => { setErr(""); setEditing(true); }}>编辑病例</button>}
-          {canEdit && editing && (
-            <>
-              <button onClick={onSaveEdit}>保存修改</button>
-              <button onClick={() => { setErr(""); setEditing(false); }}>取消</button>
-            </>
+          {job?.status && <StatusBadge status={job.status} />}
+
+          {canInfer && (
+            <button
+              onClick={onStartInfer}
+              disabled={starting || job?.status === "RUNNING" || job?.status === "QUEUED"}
+            >
+              {starting ? "推理中..." : "推理"}
+            </button>
           )}
-          {canDelete && <button onClick={onDelete}>删除病例</button>}
         </div>
+      </div>
 
-        {/* 查看/编辑区域 */}
-        {caze && (
-          <div style={{ marginTop: 10 }} className="kv">
-            {!editing ? (
-              <>
-                <b>患者姓名</b>
-                <span>{caze.patientName ?? "-"}</span>
+      {inferErr && <div style={{ marginTop: 10, color: "crimson" }}>{inferErr}</div>}
+      {job?.lastError && <div style={{ marginTop: 10, color: "crimson" }}>任务错误：{job.lastError}</div>}
 
-                <b>性别/年龄</b>
-                <span>
-                  {caze.patientSex ?? "?"} / {caze.patientAge ?? "?"}
-                </span>
+      <div style={{ height: 12 }} />
 
-                <b>基本信息</b>
-                <span>{caze.chiefComplaint}</span>
+      {/* 病例信息卡片（不变） */}
+      <div className="card">
+        <div style={{ display: "grid", gap: 6 }}>
+          <div>
+            <b>患者：</b>
+            {caze.patientName || "(未填写姓名)"}
+          </div>
+          <div>
+            <b>性别：</b>
+            {caze.patientSex || "-"}　<b>年龄：</b>
+            {caze.patientAge ?? "-"}
+          </div>
+          <div>
+            <b>科室：</b>
+            {caze.dept || "-"}　<b>状态：</b>
+            {caze.status || "-"}
+          </div>
+          <div>
+            <b>基本信息：</b>
+            {caze.chiefComplaint}
+          </div>
+          <div>
+            <b>病史：</b>
+            {caze.history ?? "-"}
+          </div>
+        </div>
+      </div>
 
-                <b>病史</b>
-                <span>{caze.history ?? "-"}</span>
-              </>
-            ) : (
-              <>
-                <b>患者姓名</b>
-                <span>
-                  <input value={patientName} onChange={(e) => setPatientName(e.target.value)} />
-                </span>
+      <div style={{ height: 14 }} />
 
-                <b>性别（男/女）</b>
-                <span>
-                  <input value={patientSex} onChange={(e) => setPatientSex(e.target.value)} />
-                </span>
+      {/* 病理图片卡片（不变） */}
+      <div className="card">
+        <div style={{ fontWeight: 900, marginBottom: 10 }}>病理图片</div>
 
-                <b>年龄（正整数）</b>
-                <span>
-                  <input
-                    type="number"
-                    value={patientAge}
-                    onChange={(e) => setPatientAge(e.target.value)}
-                    min={1}
-                    step={1}
-                  />
-                </span>
+        {images.length === 0 ? (
+          <div className="muted" style={{ fontSize: 13 }}>
+            暂无上传图片
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {images.map((img) => {
+              const src = imgUrls[img.id];
+              return (
+                <div key={img.id} className="card" style={{ padding: 10 }}>
+                  {src ? (
+                    <img
+                      src={src}
+                      alt={img.fileName || `image-${img.id}`}
+                      style={{
+                        width: "100%",
+                        height: 180,
+                        objectFit: "cover",
+                        borderRadius: 10,
+                        display: "block",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="muted"
+                      style={{
+                        height: 180,
+                        borderRadius: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(255,255,255,0.04)",
+                      }}
+                    >
+                      图片加载中...
+                    </div>
+                  )}
 
-                <b>基本信息</b>
-                <span>
-                  <textarea value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
-                </span>
-
-                <b>病史</b>
-                <span>
-                  <textarea value={history} onChange={(e) => setHistory(e.target.value)} />
-                </span>
-              </>
-            )}
+                  <div style={{ height: 8 }} />
+                  <div style={{ fontSize: 12, fontWeight: 800, wordBreak: "break-all" }}>
+                    {img.fileName || `image-${img.id}`}
+                  </div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                    {img.contentType || ""}{" "}
+                    {typeof img.fileSize === "number" ? `· ${Math.round(img.fileSize / 1024)}KB` : ""}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* 上传图片 */}
-      <div className="card">
-        <div className="cardTitle">上传图片</div>
-        <div className="row">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-          <button onClick={onUpload} disabled={!file}>
-            上传
-          </button>
-        </div>
-        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          要求：png/jpg；建议清晰近景。上传成功后再点击推理。
-        </div>
-      </div>
-
-      {/* 推理 */}
-      <div className="card">
-        <div className="cardTitle">推理任务</div>
-        <div className="row">
-          <button onClick={onInfer}>开始推理</button>
-          <div className="muted">jobId: {jobId ?? "-"}</div>
-        </div>
-      </div>
-
-      {/* 错误 */}
-      {err && <div className="error">{err}</div>}
-
-      {/* 报告 */}
-      <div className="card">
-        {reportText ? <ReportViewer text={reportText} /> : <div className="muted">暂无报告</div>}
-      </div>
+      {/* ⭐ NEW：推理成功后展示结果（其它不变） */}
+      {job?.status === "SUCCEEDED" && (
+        <>
+          <div style={{ height: 14 }} />
+          <div className="card">
+            <div style={{ fontWeight: 900, marginBottom: 10 }}>推理结果</div>
+            <ReportViewer text={reportText} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

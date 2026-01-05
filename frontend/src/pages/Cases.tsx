@@ -9,41 +9,68 @@ export default function Cases() {
         width: "100%",
         minHeight: "60vh",
         display: "flex",
-        justifyContent: "center",   // ⭐ 整体居中
+        justifyContent: "center",
         alignItems: "center",
       }}
     >
-      {/* ⭐ 两个按钮并排的容器 */}
+      {/* ⭐ NEW：2×2 网格布局 */}
       <div
         style={{
-          display: "flex",
-          gap: 48,                 // ⭐ 左右间距，显得稳重
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(220px, 1fr))",
+          gap: 22,
+          maxWidth: 520,
+          width: "100%",
         }}
       >
+        {/* 第一排 */}
         <button
-          className="landing-btn"
+          className="card"
           onClick={() => nav("/cases/create")}
           style={{
             padding: "14px 34px",
             fontSize: 18,
             borderRadius: 16,
-            minWidth: 220,          // ⭐ 保证两个按钮等宽
           }}
         >
           创建病例
         </button>
 
         <button
-          className="landing-btn"
+          className="card"
           onClick={() => nav("/cases/all")}
           style={{
             padding: "14px 34px",
             fontSize: 18,
             borderRadius: 16,
-            minWidth: 220,          // ⭐ 与上面完全一致
           }}
         >
           查看病例
+        </button>
+
+        {/* 第二排 */}
+        <button
+          className="card"
+          onClick={() => nav("/cases/edit")}
+          style={{
+            padding: "14px 34px",
+            fontSize: 18,
+            borderRadius: 16,
+          }}
+        >
+          修改病例
+        </button>
+
+        <button
+          className="card"
+          onClick={() => nav("/cases/infer")}
+          style={{
+            padding: "14px 34px",
+            fontSize: 18,
+            borderRadius: 16,
+          }}
+        >
+          推理病例
         </button>
       </div>
     </div>
