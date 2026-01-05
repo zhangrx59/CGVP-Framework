@@ -13,62 +13,43 @@ export default function Cases() {
         alignItems: "center",
       }}
     >
-      {/* ⭐ NEW：2×2 网格布局 */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(2, minmax(220px, 1fr))",
-          gap: 22,
-          maxWidth: 520,
-          width: "100%",
+          gap: 26,
+          alignItems: "center",
+          justifyItems: "center",
         }}
       >
-        {/* 第一排 */}
         <button
-          className="card"
+          className="landing-btn"
           onClick={() => nav("/cases/create")}
-          style={{
-            padding: "14px 34px",
-            fontSize: 18,
-            borderRadius: 16,
-          }}
+          style={{ padding: "14px 34px", fontSize: 18, borderRadius: 16, minWidth: 220 }}
         >
           创建病例
         </button>
 
         <button
-          className="card"
+          className="landing-btn"
           onClick={() => nav("/cases/all")}
-          style={{
-            padding: "14px 34px",
-            fontSize: 18,
-            borderRadius: 16,
-          }}
+          style={{ padding: "14px 34px", fontSize: 18, borderRadius: 16, minWidth: 220 }}
         >
           查看病例
         </button>
 
-        {/* 第二排 */}
         <button
-          className="card"
+          className="landing-btn"
           onClick={() => nav("/cases/edit")}
-          style={{
-            padding: "14px 34px",
-            fontSize: 18,
-            borderRadius: 16,
-          }}
+          style={{ padding: "14px 34px", fontSize: 18, borderRadius: 16, minWidth: 220 }}
         >
           修改病例
         </button>
 
         <button
-          className="card"
+          className="landing-btn"
           onClick={() => nav("/cases/infer")}
-          style={{
-            padding: "14px 34px",
-            fontSize: 18,
-            borderRadius: 16,
-          }}
+          style={{ padding: "14px 34px", fontSize: 18, borderRadius: 16, minWidth: 220 }}
         >
           推理病例
         </button>

@@ -109,6 +109,15 @@ public class CaseService {
         return (JwtService.JwtUser) auth.getPrincipal();
     }
 
+
+    // ⭐ MODIFIED：兼容 ROLE_ 前缀
+    private String normRole(String role) {
+        if (role == null) return "";
+        role = role.trim().toUpperCase();
+        if (role.startsWith("ROLE_")) role = role.substring("ROLE_".length());
+        return role;
+    }
+
     private CaseDtos.CaseView toView(Case c) {
         return new CaseDtos.CaseView(
                 c.getId(),

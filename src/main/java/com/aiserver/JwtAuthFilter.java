@@ -33,23 +33,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = auth.substring("Bearer ".length()).trim();
         try {
             var user = jwtService.parse(token);
-            // ⭐ MODIFIED：role 做一下规范化，避免出现 "doctor" / " Doctor " 导致权限失效
+
+            // ⭐ MODIFIED：统一规范化 role，兼容 "ROLE_ADMIN" / "admin" / " Admin "
             String role = user.role();
             if (role == null) role = "";
             role = role.trim().toUpperCase();
 
-            // ⭐ MODIFIED：role 为空时不给 authority（避免 ROLE_）
+            // ⭐ NEW：如果 role 里自带 "ROLE_" 前缀，去掉它
+            if (role.startsWith("ROLE_")) {
+                role = role.substring("ROLE_".length());
+            }
+
+            // ⭐ MODIFIED：只拼一次 ROLE_
             var authorities = role.isEmpty()
                     ? List.<SimpleGrantedAuthority>of()
                     : List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
-            var principal = user; // 直接把 JwtUser 放进去
+            // ⭐ NEW：principal 也用“去前缀后的 role”，让 Service 层判断永远一致
+            var principal = new JwtService.JwtUser(user.userId(), user.username(), role);
+
             var authentication = new UsernamePasswordAuthenticationToken(principal, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception ignored) {
             SecurityContextHolder.clearContext();
-            // 不直接返回，让后面的鉴权规则决定（/me 会 401）
         }
 
         chain.doFilter(request, response);

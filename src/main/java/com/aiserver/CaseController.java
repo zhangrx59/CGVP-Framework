@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 import java.util.Map;
 
 @RestController
@@ -17,35 +16,35 @@ public class CaseController {
         this.caseService = caseService;
     }
 
-    // 创建病例（需要登录）
+    // 创建病例（需要登录：护士/医生/管理员）
     @PostMapping
     public CaseDtos.CaseView create(@Valid @RequestBody CaseDtos.CreateReq req) {
         return caseService.create(req);
     }
 
-    // 查看病例（需要登录）
+    // 查看病例（需要登录：护士/医生/管理员）
     @GetMapping("/{id}")
     public CaseDtos.CaseView get(@PathVariable Long id) {
         return caseService.getById(id);
     }
 
-    // ⭐ NEW：查看所有病例（DOCTOR/ADMIN）
+    // 查看所有病例（需要登录：护士/医生/管理员）
     @GetMapping
     public List<CaseDtos.CaseView> listAll() {
+        System.out.println("HIT /cases LIST ALL");
         return caseService.listAll();
     }
 
-    // ⭐ NEW：删除病例（DOCTOR / ADMIN）
+    // 删除病例（仅管理员 ADMIN）
     @DeleteMapping("/{id}")
     public Map<String, Object> delete(@PathVariable Long id) {
         caseService.deleteById(id);
         return Map.of("ok", true);
     }
 
-    // ⭐ NEW：修改病例（DOCTOR / ADMIN）
+    // 修改病例（医生 DOCTOR / 管理员 ADMIN）
     @PutMapping("/{id}")
-    public CaseDtos.CaseView update(@PathVariable Long id, @jakarta.validation.Valid @RequestBody CaseDtos.UpdateReq req) {
+    public CaseDtos.CaseView update(@PathVariable Long id, @Valid @RequestBody CaseDtos.UpdateReq req) {
         return caseService.updateById(id, req);
     }
-
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
+import { setAuthToken } from "../api/http"; // ⭐ NEW：登录后立刻把 token 写入 axios header
 
 export default function Login() {
   const nav = useNavigate();
@@ -19,6 +20,10 @@ export default function Login() {
       localStorage.setItem("role", resp.user.role);
       localStorage.setItem("userId", String(resp.user.id));
       localStorage.setItem("username", resp.user.username);
+
+      setAuthToken(resp.token); // ⭐ NEW：关键！不刷新页面也能立刻带上 Authorization
+
+
       nav("/cases");
     } catch (e: any) {
       setErr(e?.response?.data?.message || e?.message || "登录失败");
