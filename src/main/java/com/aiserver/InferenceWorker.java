@@ -10,6 +10,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 
+
+import org.springframework.transaction.annotation.Transactional;
+
+
 @Component
 public class InferenceWorker {
 
@@ -58,6 +62,10 @@ public class InferenceWorker {
         ensureGroup();
     }
 
+
+
+
+
     @Scheduled(fixedDelayString = "${app.queue.poll-ms}")
     public void poll() {
         try {
@@ -93,6 +101,8 @@ public class InferenceWorker {
         }
     }
 
+    // ✅ NEW：加事务，保证 delete + save 原子性（避免并发时出现两条）
+    @Transactional // ✅ NEW
     private void processJob(Long jobId) {
         InferenceJob job = jobRepo.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("job not found"));
@@ -130,7 +140,10 @@ public class InferenceWorker {
             // 调 FastAPI（multipart -> txt）
             String txt = inferApiClient.inferReportMultipartTxt(imagePath, metaJsonString);
 
-            // 保存结果
+            // ✅ NEW：覆盖策略——先删掉该病例之前的推理结果，再保存新结果
+            resultRepo.deleteByCaseId(caseId); // ✅ NEW
+
+            // 保存结果（最新一条）
             InferenceResult r = new InferenceResult();
             r.setJobId(job.getId());
             r.setCaseId(caseId);
@@ -138,14 +151,14 @@ public class InferenceWorker {
             // 兜底：resultJson 字段也存原文（虽然名字叫 json，但我们现在存 txt）
             r.setResultJson(txt);
 
-            // 从第一行解析 probs，并推断 predLabel（保持你原本字段可用）
+            // 从第一行解析 probs，并推断 predLabel
             ParsedTxtReport parsed = ParsedTxtReport.parse(txt);
             if (parsed != null) {
                 if (parsed.predLabel != null) r.setPredLabel(parsed.predLabel);
                 if (parsed.probsJson != null) r.setProbsJson(parsed.probsJson);
             }
 
-            // reportJson 字段现在改作“报告纯文本”保存（避免 DTO 解析 JSON 失败）
+            // reportJson 字段现在改作“报告纯文本”保存
             r.setReportJson(txt);
 
             resultRepo.save(r);
@@ -162,11 +175,9 @@ public class InferenceWorker {
             jobRepo.save(job);
 
             System.err.println("[WORKER] job " + jobId + " FAILED: " + job.getLastError());
-
             throw e;
         }
     }
-
     /**
      * ✅ MODIFIED：用“护士填写的文本”代替 meta.json 文件
      *
