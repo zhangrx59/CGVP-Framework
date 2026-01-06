@@ -124,33 +124,31 @@ public class InferenceWorker {
 
             String imagePath = latest.getFilePath();
 
-            // 严格 meta.json：key 必须齐全，缺的填空
+            // ✅ 严格 meta.json：key 必须齐全，缺的填空
             String metaJsonString = buildStrictMetaJson(c);
 
             // 调 FastAPI（multipart -> txt）
-                        String txt = inferApiClient.inferReportMultipartTxt(imagePath, metaJsonString);
+            String txt = inferApiClient.inferReportMultipartTxt(imagePath, metaJsonString);
 
             // 保存结果
-                        InferenceResult r = new InferenceResult();
-                        r.setJobId(job.getId());
-                        r.setCaseId(caseId);
+            InferenceResult r = new InferenceResult();
+            r.setJobId(job.getId());
+            r.setCaseId(caseId);
 
             // 兜底：resultJson 字段也存原文（虽然名字叫 json，但我们现在存 txt）
-                        r.setResultJson(txt);
+            r.setResultJson(txt);
 
             // 从第一行解析 probs，并推断 predLabel（保持你原本字段可用）
-                        ParsedTxtReport parsed = ParsedTxtReport.parse(txt);
-                        if (parsed != null) {
-                            if (parsed.predLabel != null) r.setPredLabel(parsed.predLabel);
-                            if (parsed.probsJson != null) r.setProbsJson(parsed.probsJson);
-                        }
+            ParsedTxtReport parsed = ParsedTxtReport.parse(txt);
+            if (parsed != null) {
+                if (parsed.predLabel != null) r.setPredLabel(parsed.predLabel);
+                if (parsed.probsJson != null) r.setProbsJson(parsed.probsJson);
+            }
 
             // reportJson 字段现在改作“报告纯文本”保存（避免 DTO 解析 JSON 失败）
-                        r.setReportJson(txt);
+            r.setReportJson(txt);
 
-            // modelVersion（可选）你可以在 FastAPI 文本里加版本行再解析，这里先不填
-                        resultRepo.save(r);
-
+            resultRepo.save(r);
 
             job.setStatus("SUCCEEDED");
             job.setFinishedAt(Instant.now());
@@ -170,30 +168,91 @@ public class InferenceWorker {
     }
 
     /**
-     * 你要求 meta.json 严格包含 21 个字段。
-     * 当前 Case 实体只有 patientAge/patientSex 等少量信息，所以这里做“最小可跑通”映射：
-     *  - 年龄 <- patientAge
-     *  - 性别 <- patientSex
-     *  - 其他字段暂填空字符串（但 key 必须存在）
+     * ✅ MODIFIED：用“护士填写的文本”代替 meta.json 文件
      *
-     * 后续你把病例表扩展字段后，只需要在这里把值补上即可。
+     * 约定：
+     * - Case.patientAge -> 年龄
+     * - Case.patientSex -> 性别
+     * - Case.chiefComplaint -> 解析为“基本信息”的 kv（父籍贯/母籍贯/是否吸烟/...）
+     * - Case.history -> 解析为“病史”的 kv（皮肤癌病史/癌症病史）
+     *
+     * 解析格式（建议前端提示护士这么填）：
+     *   父籍贯: 河北；母籍贯: 河北；是否吸烟: 否；...
+     * 支持分隔符：； ; 换行
+     * 支持冒号：： :
+     *
+     * 保证：REQUIRED_FIELDS 的 key 全部存在，缺失值填 ""（空字符串）
      */
     private String buildStrictMetaJson(Case c) {
         Map<String, Object> m = new LinkedHashMap<>();
 
-        // 先全部填空，保证 key 齐全
+        // 1) 先全部填空，保证 key 齐全
         for (String k : REQUIRED_FIELDS) {
             m.put(k, "");
         }
 
-        // 再覆盖你现在有的数据
+        // 2) 覆盖“结构化字段”（年龄/性别）
         if (c.getPatientAge() != null) m.put("年龄", c.getPatientAge());
         if (c.getPatientSex() != null) m.put("性别", c.getPatientSex());
 
-        // （可选）你现有 Case 里有 chiefComplaint/history，可先拼到“形态变化/区域”等字段里做联调
-        // 这里我不乱塞，保持严格字段+不擅自杜撰含义
+        // 3) ✅ 从“基本信息/病史”文本解析 kv，并回填到 meta
+        Map<String, String> basicKv = parseKvText(c.getChiefComplaint());
+        Map<String, String> historyKv = parseKvText(c.getHistory());
+
+        // 只接受 REQUIRED_FIELDS 中的 key，避免护士多写导致 meta 乱入
+        applyKvToMeta(m, basicKv);
+        applyKvToMeta(m, historyKv);
 
         return JsonUtil.toJson(m);
+    }
+
+    // ✅ NEW：把 kv 回填到 meta（仅限 REQUIRED_FIELDS）
+    private void applyKvToMeta(Map<String, Object> meta, Map<String, String> kv) {
+        if (kv == null || kv.isEmpty()) return;
+
+        for (Map.Entry<String, String> e : kv.entrySet()) {
+            String key = e.getKey();
+            String val = e.getValue();
+
+            if (key == null) continue;
+            key = key.trim();
+            if (val == null) val = "";
+            val = val.trim();
+
+            if (!REQUIRED_FIELDS.contains(key)) continue;
+
+            // 写入（覆盖空值）
+            meta.put(key, val);
+        }
+    }
+
+    // ✅ NEW：解析护士输入的 “key: value；key: value” 文本
+    private Map<String, String> parseKvText(String text) {
+        Map<String, String> out = new LinkedHashMap<>();
+        if (text == null) return out;
+
+        String s = text.trim();
+        if (s.isEmpty()) return out;
+
+        // 支持：中文分号/英文分号/换行
+        String[] items = s.split("[；;\\r\\n]+");
+        for (String item : items) {
+            if (item == null) continue;
+            String it = item.trim();
+            if (it.isEmpty()) continue;
+
+            // 支持中文冒号/英文冒号
+            int idx = it.indexOf('：');
+            if (idx < 0) idx = it.indexOf(':');
+            if (idx <= 0) continue; // 没有 key/value
+
+            String k = it.substring(0, idx).trim();
+            String v = it.substring(idx + 1).trim();
+            if (k.isEmpty()) continue;
+
+            out.put(k, v);
+        }
+        return out;
     }
 
     private void ensureGroup() {
@@ -263,5 +322,4 @@ public class InferenceWorker {
             return out;
         }
     }
-
 }

@@ -4,15 +4,17 @@ import io
 import json
 import os
 from typing import Dict, Any, List, Optional
-from fastapi.responses import Response
+
 import re
 import torch
 from PIL import Image
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from fastapi.responses import Response, PlainTextResponse  # ✅ CHANGED: 补充 PlainTextResponse
 from pydantic import BaseModel
-import json
+
 from transformers import AutoModelForImageTextToText, AutoProcessor
 from peft import PeftModel
+
 
 def _extract_json_from_text(text: str):
     # 优先抓 ```json ... ```（如果模型仍然输出了 code fence）
@@ -24,9 +26,10 @@ def _extract_json_from_text(text: str):
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end != -1 and end > start:
-        return text[start:end+1]
+        return text[start:end + 1]
 
     return None
+
 
 def _safe_float(x, d=0.0):
     try:
@@ -34,12 +37,13 @@ def _safe_float(x, d=0.0):
     except Exception:
         return d
 
+
 # ===== 与训练/评估保持一致的 4 类顺序 =====
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]  # :contentReference[oaicite:3]{index=3}
 
 # ===== 你 evaluate 里写死的默认超参 =====
 DEFAULT_LOGIT_BIAS = [1.75, 1.0, 0.0, -1.0]  # :contentReference[oaicite:4]{index=4}
-DEFAULT_MEL_THRESH = 0.55                   # :contentReference[oaicite:5]{index=5}
+DEFAULT_MEL_THRESH = 0.55  # :contentReference[oaicite:5]{index=5}
 
 # ===== 你要求严格包含的 20 个字段（键名就是中文）=====
 REQUIRED_FIELDS = [
@@ -165,7 +169,6 @@ def build_clinical_note(row: Dict[str, Any]) -> str:
     return " ".join(parts)  # :contentReference[oaicite:18]{index=18}
 
 
-
 def _build_report_prompt(clinical_note: str, pred_label: str, probs: dict) -> str:
     probs_str = ", ".join([f"{k}:{float(v):.4f}" for k, v in probs.items()])
 
@@ -244,44 +247,70 @@ def _build_report_prompt_txt(clinical_note: str, pred_label: str, probs: dict) -
         - 不要输出任何多余内容
         """.strip()
 
-def _extract_two_lines(text: str) -> (str, str):
+
+def _extract_two_lines(raw: str) -> tuple[str, str]:
     """
-    从模型输出里尽量稳地抽出“诊断依据/就诊建议”两行，允许模型有少量废话。
+    从模型 raw 输出中抽取：
+      - 诊断依据：...
+      - 就诊建议：...
+    只返回内容部分（不含前缀）。
+    若抽不到则兜底用最后两行/前两行。
     """
-    # 先统一换行
-    t = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    # ✅ CHANGED: 更强的清洗，避免把 prompt/user/model 混进来
+    if not raw:
+        return ("", "")
 
-    # 尝试直接按标签提取
-    m1 = re.search(r"诊断依据[:：]\s*(.*)", t)
-    m2 = re.search(r"就诊建议[:：]\s*(.*)", t)
+    text = raw.strip()
 
-    basis = m1.group(1).strip() if m1 else ""
-    advice = m2.group(1).strip() if m2 else ""
+    # ✅ CHANGED: 如果输出里出现 user/model，对话模板，尽量只取最后一次 "诊断依据/就诊建议" 之后的部分
+    idx = text.rfind("诊断依据")
+    if idx != -1:
+        text = text[idx:]
 
-    # 兜底：如果匹配不到，就取前两行
+    m_idx = text.lower().rfind("\nmodel")
+    if m_idx != -1:
+        tail = text[m_idx:]
+        if ("诊断依据" in tail) or ("就诊建议" in tail):
+            text = tail
+
+    basis = ""
+    advice = ""
+
+    m1 = re.search(r"诊断依据\s*[:：]\s*(.*)", text)
+    if m1:
+        basis = m1.group(1).strip()
+
+    m2 = re.search(r"就诊建议\s*[:：]\s*(.*)", text)
+    if m2:
+        advice = m2.group(1).strip()
+
+    if basis:
+        basis = basis.splitlines()[0].strip()
+    if advice:
+        advice = advice.splitlines()[0].strip()
+
     if not basis or not advice:
-        lines = [ln.strip() for ln in t.split("\n") if ln.strip()]
-        if not basis and len(lines) >= 1:
-            basis = lines[0]
-            if not basis.startswith("诊断依据：") and not basis.startswith("诊断依据:"):
-                basis = "诊断依据：" + basis
-            else:
-                basis = re.sub(r"^诊断依据[:：]\s*", "", basis)
+        lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+        if len(lines) >= 2:
+            fallback_basis = lines[-2]
+            fallback_adv = lines[-1]
+            if not basis:
+                basis = fallback_basis
+            if not advice:
+                advice = fallback_adv
+        elif len(lines) == 1:
+            if not basis:
+                basis = lines[0]
+            if not advice:
+                advice = lines[0]
 
-        if not advice and len(lines) >= 2:
-            advice = lines[1]
-            if not advice.startswith("就诊建议：") and not advice.startswith("就诊建议:"):
-                advice = "就诊建议：" + advice
-            else:
-                advice = re.sub(r"^就诊建议[:：]\s*", "", advice)
+    for bad in ["user", "model", "You are", "clinical assistant", "Task:"]:
+        if basis.lower().startswith(bad.lower()):
+            basis = ""
+        if advice.lower().startswith(bad.lower()):
+            advice = ""
 
-    # 最终保证非空
-    if not basis:
-        basis = "需进一步检查/无法判断（模型未按格式输出）"
-    if not advice:
-        advice = "建议皮肤科就诊，结合皮肤镜检查，必要时活检明确诊断。"
-
-    return basis, advice
+    return (basis.strip(), advice.strip())
 
 
 def _generate_report_text(prompt: str, image, max_new_tokens: int = 220) -> str:
@@ -299,15 +328,15 @@ def _generate_report_text(prompt: str, image, max_new_tokens: int = 220) -> str:
         )
 
     out = PROCESSOR.tokenizer.decode(gen_ids[0], skip_special_tokens=True)
-
     return out
 
-@app.post("/infer_report_multipart_txt")
+
+@app.post("/infer_report_multipart_txt", response_class=PlainTextResponse)  # ✅ CHANGED: 明确返回纯文本
 async def infer_report_multipart_txt(
-    meta_json: UploadFile = File(...),
-    image: UploadFile = File(...),
-    logit_bias: Optional[str] = Query(None),
-    mel_thresh: Optional[float] = Query(None),
+        meta_json: UploadFile = File(...),
+        image: UploadFile = File(...),
+        logit_bias: Optional[str] = Query(None),
+        mel_thresh: Optional[float] = Query(None),
 ):
     if MODEL is None:
         raise HTTPException(status_code=503, detail="model not loaded")
@@ -344,18 +373,30 @@ async def infer_report_multipart_txt(
     clinical_note = build_clinical_note(meta)
     pred, probs = _linear_logits_predict(pil, clinical_note, bias, thr)
 
-    # B) 生成两行报告（txt）
-    report_prompt = _build_report_prompt_txt(clinical_note, pred, probs)
-    advice = _generate_report_text(report_prompt, pil)
+    # ✅ CHANGED: 这里补上 probs_line 的定义（之前未定义导致 IDE 报错/运行报错）
+    probs_line = " ".join([f"{k}:{float(probs.get(k, 0.0)):.6f}" for k in ALLOWED_DX])  # ✅ CHANGED
 
-    # C) 拼成你想要的 txt 格式
-    probs_line = " ".join([f"{k}:{probs.get(k, 0.0):.6f}" for k in ALLOWED_DX])
+    # B) 生成报告 raw 文本（可能包含 prompt / user / model）
+    report_prompt = _build_report_prompt_txt(clinical_note, pred, probs)
+    raw_text = _generate_report_text(report_prompt, pil)
+
+    # ✅ CHANGED: 抽取两行内容，避免 prompt 泄漏
+    basis, advice = _extract_two_lines(raw_text)
+
+    # ✅ CHANGED: 兜底
+    if not basis:
+        basis = "依据图像特征与模型分类结果综合判断，建议结合皮肤镜/病理检查进一步确认。"
+    if not advice:
+        advice = "建议至皮肤科就诊，完善皮肤镜检查，必要时进行活检以明确诊断。"
+
+    # ✅ CHANGED: 严格三行输出
     txt = (
         f"预测标签：{{{probs_line}}}\n"
+        f"诊断依据：{basis}\n"
         f"就诊建议：{advice}\n"
     )
+    return PlainTextResponse(txt)  # ✅ CHANGED
 
-    return Response(content=txt, media_type="text/plain; charset=utf-8")
 
 def _pick_device_dtype():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # :contentReference[oaicite:19]{index=19}
@@ -365,7 +406,6 @@ def _pick_device_dtype():
     else:
         dtype = torch.float32
     return device, dtype
-
 
 
 def _repair_to_json_only(raw_text: str) -> str:
@@ -420,7 +460,7 @@ def _generate_report_json(report_prompt: str, image, max_new_tokens: int = 700) 
             **repair_inputs,
             max_new_tokens=500,
             do_sample=False,
-            temperature=0.0,   # 修复阶段更“死板”更稳
+            temperature=0.0,  # 修复阶段更“死板”更稳
         )
 
     repair_out = PROCESSOR.tokenizer.decode(repair_ids[0], skip_special_tokens=True)
@@ -432,6 +472,7 @@ def _generate_report_json(report_prompt: str, image, max_new_tokens: int = 700) 
             pass
 
     return {"raw_text": text}
+
 
 @app.on_event("startup")
 def _startup_load_model():
@@ -511,8 +552,12 @@ def _build_prompt(clinical_note: str, image: Image.Image) -> str:
     )
 
 
-def _linear_logits_predict(image: Image.Image, clinical_note: str,
-                           logit_bias: List[float], mel_thresh: float) -> (str, Dict[str, float]):
+def _linear_logits_predict(
+        image: Image.Image,
+        clinical_note: str,
+        logit_bias: List[float],
+        mel_thresh: float
+) -> (str, Dict[str, float]):
     """
     严格复刻 evaluate 的线性 logits 推理：last_logits -> logits_4 -> +bias -> softmax -> mel gate :contentReference[oaicite:23]{index=23}
     """
@@ -527,8 +572,8 @@ def _linear_logits_predict(image: Image.Image, clinical_note: str,
     with torch.no_grad():
         outputs = MODEL(**inputs)  # 不 generate :contentReference[oaicite:24]{index=24}
 
-    last_logits = outputs.logits[0, -1, :]             # :contentReference[oaicite:25]{index=25}
-    logits_4 = last_logits[LABEL_TOKEN_IDS]            # :contentReference[oaicite:26]{index=26}
+    last_logits = outputs.logits[0, -1, :]  # :contentReference[oaicite:25]{index=25}
+    logits_4 = last_logits[LABEL_TOKEN_IDS]  # :contentReference[oaicite:26]{index=26}
     logits_4 = logits_4 + torch.tensor(logit_bias, device=DEVICE)
 
     probs_4 = torch.softmax(logits_4, dim=-1)
@@ -556,10 +601,10 @@ def _validate_required_fields(meta: Dict[str, Any]):
 
 @app.post("/infer_report_multipart")
 async def infer_report_multipart(
-    meta_json: UploadFile = File(...),
-    image: UploadFile = File(...),
-    logit_bias: Optional[str] = Query(None),
-    mel_thresh: Optional[float] = Query(None),
+        meta_json: UploadFile = File(...),
+        image: UploadFile = File(...),
+        logit_bias: Optional[str] = Query(None),
+        mel_thresh: Optional[float] = Query(None),
 ):
     if MODEL is None:
         raise HTTPException(status_code=503, detail="model not loaded")
@@ -604,4 +649,3 @@ async def infer_report_multipart(
     out = f"预测标签：{{{probs_line}}}\n{txt.strip()}\n"
 
     return Response(content=out, media_type="text/plain; charset=utf-8")
-

@@ -1,28 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createCase, uploadCaseImage } from "../api/cases"; // ⭐ NEW：引入 uploadCaseImage
+import { createCase, uploadCaseImage } from "../api/cases";
 
 export default function CaseCreate() {
   const nav = useNavigate();
 
   const [patientName, setPatientName] = useState("");
   const [gender, setGender] = useState("");
-  const [age, setAge] = useState<string>(""); // 保持你之前的写法：字符串
-  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [age, setAge] = useState<string>("");
+
+  const [chiefComplaint, setChiefComplaint] = useState(""); // 基本信息
+  const [history, setHistory] = useState(""); // ✅ NEW：病史
+
   const [err, setErr] = useState<string | null>(null);
 
-  // ⭐ NEW：上传图片相关 state
   const [imgFile, setImgFile] = useState<File | null>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // ⭐ NEW：本地预览 URL（可选但很实用）
   const previewUrl = useMemo(() => {
     if (!imgFile) return "";
     return URL.createObjectURL(imgFile);
   }, [imgFile]);
 
-  // ⭐ NEW：释放预览 URL，避免内存泄露
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -33,7 +33,6 @@ export default function CaseCreate() {
     setErr(null);
     setUploadMsg(null);
 
-    // ⭐ 你原有的前端防呆校验（保留）
     const g = gender.trim();
     const a = age.trim();
 
@@ -55,30 +54,27 @@ export default function CaseCreate() {
     try {
       const role = (localStorage.getItem("role") || "").toUpperCase();
 
-      // 1) 先创建病例
+      // ✅ MODIFIED：把 history 一并提交给后端（代替 meta.json 文件）
       const c = await createCase({
         patientName: patientName.trim() || undefined,
         gender: g,
         age: Number(a),
         chiefComplaint: chiefComplaint.trim(),
+        history: history.trim() || undefined, // ✅ NEW
       });
 
-      // ⭐ NEW：2) 如果用户在创建时选了图片，则自动上传（覆盖上传）
       if (imgFile) {
         setUploading(true);
         try {
           await uploadCaseImage(c.id, imgFile);
           setUploadMsg("图片上传成功（已作为该病例最新病例图）");
         } catch (e: any) {
-          // 图片上传失败：不影响病例创建成功，但提示用户
           setUploadMsg(e?.response?.data?.message || e?.message || "图片上传失败（病例已创建）");
         } finally {
           setUploading(false);
         }
       }
 
-      // 3) 保持你原来的导航逻辑（但做一个很小的优化）
-      // - 护士：如果没选图片，仍去上传页；如果选了图片并已上传，就直接去详情页
       if (role === "NURSE" && !imgFile) {
         nav(`/cases/${c.id}/upload`);
       } else {
@@ -89,15 +85,13 @@ export default function CaseCreate() {
     }
   }
 
+  // ✅ NEW：给护士一个“可复制样例”
+  const basicInfoHint =
+    "父籍贯: 河北；母籍贯: 河北；是否吸烟: 否；是否饮酒: 否；农药: 否；生活环境是否有自来水: 是；生活环境是否有下水道: 是；皮肤光型: III；区域: face；直径1: 8；直径2: 6；瘙痒: 否；是否长大: 是；疼痛: 否；形态变化: 是；出血: 否；是否隆起: 是；";
+  const historyHint = "皮肤癌病史: 否；癌症病史: 否；";
+
   return (
-    // 外层负责居中
-    <div
-      style={{
-        width: "100%",
-        display: "flex",
-        justifyContent: "center",
-      }}
-    >
+    <div style={{ width: "100%", display: "flex", justifyContent: "center" }}>
       <div style={{ maxWidth: 520, width: "100%" }}>
         <h3>创建病例</h3>
 
@@ -119,14 +113,23 @@ export default function CaseCreate() {
             inputMode="numeric"
           />
 
+          {/* ✅ MODIFIED：明确说明这是“基本信息 kv”，用于代替 meta.json */}
           <textarea
-            placeholder="基本信息（不能为空）"
+            placeholder={`基本信息（不能为空，按“key: value；”填写）\n例如：${basicInfoHint}`}
             value={chiefComplaint}
             onChange={(e) => setChiefComplaint(e.target.value)}
+            rows={5}
+          />
+
+          {/* ✅ NEW：病史输入框 */}
+          <textarea
+            placeholder={`病史（可选，按“key: value；”填写）\n例如：${historyHint}`}
+            value={history}
+            onChange={(e) => setHistory(e.target.value)}
             rows={3}
           />
 
-          {/* ⭐ NEW：上传病例图片卡片（可选） */}
+          {/* 上传图片卡片（保持不动） */}
           <div className="card" style={{ padding: 14 }}>
             <div style={{ fontWeight: 900, marginBottom: 10 }}>上传病例图片（可选）</div>
 
@@ -166,9 +169,9 @@ export default function CaseCreate() {
           <button onClick={submit} disabled={uploading}>
             {uploading ? "上传中..." : "创建"}
           </button>
-        </div>
 
-        {err && <div style={{ color: "crimson", marginTop: 10 }}>{err}</div>}
+          {err && <div className="error">{err}</div>}
+        </div>
       </div>
     </div>
   );

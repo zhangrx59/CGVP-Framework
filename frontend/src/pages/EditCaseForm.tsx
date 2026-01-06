@@ -133,16 +133,20 @@ export default function EditCaseForm() {
         <textarea
           value={chiefComplaint}
           onChange={(e) => setChiefComplaint(e.target.value)}
-          placeholder="基本信息（不能为空）"
-          rows={3}
+          placeholder={
+            "基本信息（不能为空，按“key: value；”填写）\n" +
+            "例：父籍贯: 河北；母籍贯: 河北；是否吸烟: 否；是否饮酒: 否；农药: 否；生活环境是否有自来水: 是；生活环境是否有下水道: 是；皮肤光型: III；区域: face；直径1: 8；直径2: 6；瘙痒: 否；是否长大: 是；疼痛: 否；形态变化: 是；出血: 否；是否隆起: 是；"
+          }
+          rows={5}
         />
 
         <textarea
           value={history}
           onChange={(e) => setHistory(e.target.value)}
-          placeholder="病史（可选）"
+          placeholder={"病史（可选，按“key: value；”填写）\n例：皮肤癌病史: 否；癌症病史: 否；"}
           rows={3}
         />
+
 
         <button onClick={onSave}>保存修改</button>
       </div>
