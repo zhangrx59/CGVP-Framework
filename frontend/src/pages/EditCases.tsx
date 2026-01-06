@@ -1,9 +1,7 @@
-// EditCases.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-// ✅ CHANGED：从 pages 下访问 src/api，必须用 ../api/xxx
-import { listAllCases, deleteCase, type CaseView } from "../api/cases"; // ✅ CHANGED
+import { listAllCases, deleteCase } from "../api/cases";
+import type { CaseView } from "../api/cases";
 
 export default function ModifyCases() {
   const nav = useNavigate();
@@ -16,14 +14,9 @@ export default function ModifyCases() {
   const canDelete = role === "DOCTOR" || role === "ADMIN";
 
   useEffect(() => {
-    // 护士进入此页要显示“无权限”（但页面必须能渲染出来）
-    if (role !== "DOCTOR" && role !== "ADMIN") {
-      setErr("无权限：只有医生/管理员可以修改病例");
-      setLoading(false);
-      return;
-    }
-
     (async () => {
+      setLoading(true);
+      setErr(null);
       try {
         const data = await listAllCases();
         setItems(data);
@@ -33,10 +26,14 @@ export default function ModifyCases() {
         setLoading(false);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function onDelete(id: number) {
+    if (!canDelete) {
+      alert("无权限");
+      return;
+    }
+
     const ok = window.confirm(`确认删除病例 #${id} 吗？此操作不可恢复。`);
     if (!ok) return;
 
@@ -44,26 +41,24 @@ export default function ModifyCases() {
       await deleteCase(id);
       setItems((prev) => prev.filter((x) => x.id !== id));
     } catch (e: any) {
-      setErr(e?.response?.data?.message || e?.message || "删除失败");
+      alert(e?.response?.data?.message || e?.message || "删除失败");
     }
   }
 
-  if (loading) return <div>加载中.</div>;
+  if (loading) return <div style={{ padding: 24 }}>加载中...</div>;
 
   if (err) {
     return (
-      <div style={{ maxWidth: 720 }}>
-        <h3>修改病例</h3>
+      <div style={{ padding: 24 }}>
         <div style={{ color: "crimson" }}>{err}</div>
-        <div style={{ height: 12 }} />
-        <button onClick={() => nav("/cases")}>返回</button>
+        <button onClick={() => nav("/")}>返回首页</button>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 900 }}>
-      <h3>修改病例</h3>
+    <div style={{ padding: 24 }}>
+      <h3>可修改病例列表</h3>
 
       <div style={{ display: "grid", gap: 10 }}>
         {items.map((c) => (
@@ -71,30 +66,48 @@ export default function ModifyCases() {
             key={c.id}
             className="card"
             style={{ cursor: "pointer" }}
-            onClick={() => nav(`/cases/${c.id}`)}
+            onClick={() =>
+              nav(`/cases/${c.id}`, {
+                state: { backTo: "/cases/edit" }, // ✅ NEW
+              })
+            }
           >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                alignItems: "center",
+              }}
+            >
               <div style={{ fontWeight: 900 }}>
                 #{c.id} {c.patientName || "(未填写姓名)"}
               </div>
 
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <div className="muted" style={{ fontSize: 12, opacity: 0.85 }}>
-                  {c.dept ? `科室：${c.dept}` : ""} {c.status ? `  状态：${c.status}` : ""}
+                  {c.dept ? `科室：${c.dept}` : ""}
+                  {c.status ? `  状态：${c.status}` : ""}
                 </div>
 
-                {canEdit && (
-                  <button
-                    style={{ padding: "6px 10px" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      nav(`/cases/${c.id}/edit`);
-                    }}
-                  >
-                    修改
-                  </button>
-                )}
+                {/* 修改：所有人都显示，护士点了提示无权限 */}
+                <button
+                  style={{ padding: "6px 10px" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!canEdit) {
+                      alert("无权限");
+                      return;
+                    }
+                    nav(`/cases/${c.id}/edit`, {
+                      state: { backTo: "/cases/edit" }, // ✅ NEW
+                    });
+                  }}
+                >
+                  修改
+                </button>
 
+                {/* 删除：仅 DOCTOR/ADMIN 能用（按钮也可选择隐藏，你之前就是隐藏，我这里不强行改） */}
                 {canDelete && (
                   <button
                     style={{ padding: "6px 10px" }}
@@ -109,18 +122,22 @@ export default function ModifyCases() {
               </div>
             </div>
 
-            <div className="muted" style={{ marginTop: 6 }}>
-              性别：{c.patientSex || "-"}　年龄：{c.patientAge ?? "-"}
-            </div>
+            <div style={{ marginTop: 8, opacity: 0.9 }}>
+              <div style={{ fontSize: 13 }}>
+                <b>性别：</b>
+                {c.patientSex ?? "-"} <b style={{ marginLeft: 12 }}>年龄：</b>
+                {c.patientAge ?? "-"}
+              </div>
 
-            <div style={{ marginTop: 8 }}>
-              <b>基本信息：</b>
-              {c.chiefComplaint}
-            </div>
+              <div style={{ fontSize: 13, marginTop: 6 }}>
+                <b>基本信息：</b>
+                {c.chiefComplaint ?? "-"}
+              </div>
 
-            <div style={{ marginTop: 6 }}>
-              <b>病史：</b>
-              {c.history ?? "-"}
+              <div style={{ fontSize: 13, marginTop: 6 }}>
+                <b>病史：</b>
+                {c.history ?? "-"}
+              </div>
             </div>
           </div>
         ))}
@@ -131,6 +148,10 @@ export default function ModifyCases() {
           暂无病例
         </div>
       )}
+
+      <div style={{ marginTop: 16 }}>
+        <button onClick={() => nav("/")}>返回首页</button>
+      </div>
     </div>
   );
 }

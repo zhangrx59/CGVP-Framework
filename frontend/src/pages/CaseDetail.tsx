@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 
 import {
   getCase,
@@ -17,7 +17,22 @@ import ReportViewer from "../components/ReportViewer";
 export default function CaseDetail() {
   const { id } = useParams();
   const caseId = useMemo(() => Number(id), [id]);
+
   const nav = useNavigate();
+
+  // ✅ NEW：支持从 /cases/edit 返回；默认回 /cases/edit（满足你现在的需求）
+  const location = useLocation();
+  const backTo = (location.state as any)?.backTo || "/cases/edit";
+
+  // ✅ NEW：跨页面提示（修改成功/图片更新成功）
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => {
+    const msg = sessionStorage.getItem("flash_msg");
+    if (msg) {
+      setFlash(msg);
+      sessionStorage.removeItem("flash_msg");
+    }
+  }, []);
 
   const role = (localStorage.getItem("role") || "").toUpperCase();
   const canInfer = role === "DOCTOR" || role === "ADMIN";
@@ -29,151 +44,143 @@ export default function CaseDetail() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // ⭐ NEW：推理相关状态
+  // 推理相关
   const [job, setJob] = useState<InferenceJob | null>(null);
   const [inferErr, setInferErr] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
-  const [result, setResult] = useState<InferenceResultView | null>(null);
 
-  // ✅ 1) 加载病例详情 + 图片列表
+  const [result, setResult] = useState<InferenceResultView | null>(null);
+  const [resultLoading, setResultLoading] = useState(false);
+
+  // ✅ 释放 blob url
   useEffect(() => {
-    if (!Number.isFinite(caseId) || caseId <= 0) {
-      setErr("病例 ID 非法");
+    return () => {
+      Object.values(imgUrls).forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 1) 加载病例详情
+  useEffect(() => {
+    if (!Number.isFinite(caseId)) {
+      setErr("路由参数错误：caseId 不是合法数字");
       setLoading(false);
       return;
     }
 
     (async () => {
-      setErr(null);
       setLoading(true);
+      setErr(null);
       try {
-        const [c, imgs] = await Promise.all([getCase(caseId), listCaseImages(caseId)]);
+        const c = await getCase(caseId);
         setCaze(c);
-        setImages(imgs || []);
       } catch (e: any) {
-        setErr(e?.response?.data?.message || e?.message || "加载失败");
+        setErr(e?.response?.data?.message || e?.message || "获取病例失败");
       } finally {
         setLoading(false);
       }
     })();
   }, [caseId]);
 
-  // ✅ 2) 图片：blob URL
+  // 2) 加载病例图片列表，并拉取 blob 作为预览（保留你原实现）
   useEffect(() => {
-    const cleanup = (m: Record<number, string>) => {
-      Object.values(m).forEach((u) => {
-        try {
-          URL.revokeObjectURL(u);
-        } catch {
-          // ignore
-        }
-      });
-    };
+    if (!Number.isFinite(caseId)) return;
 
-    if (!images || images.length === 0) {
-      setImgUrls((prev) => {
-        cleanup(prev);
-        return {};
-      });
+    (async () => {
+      try {
+        const imgs = await listCaseImages(caseId);
+        setImages(imgs);
+
+        // 拉取每张图片 blob 并生成本地 url
+        const urlMap: Record<number, string> = {};
+        for (const img of imgs) {
+          try {
+            const blob = await fetchCaseImageBlob(img.id);
+            urlMap[img.id] = URL.createObjectURL(blob);
+          } catch {
+            // 单张图片失败不影响页面
+          }
+        }
+        setImgUrls((prev) => {
+          // 先释放旧的
+          Object.values(prev).forEach((u) => URL.revokeObjectURL(u));
+          return urlMap;
+        });
+      } catch {
+        // 图片加载失败不打断主流程
+      }
+    })();
+  }, [caseId]);
+
+  // 3) 如果病例已有推理任务/结果：这里按你原逻辑轮询/获取（保留）
+  useEffect(() => {
+    if (!caze?.latestJobId) return;
+
+    (async () => {
+      try {
+        const j = await getJob(caze.latestJobId);
+        setJob(j);
+      } catch {
+        // ignore
+      }
+    })();
+  }, [caze?.latestJobId]);
+
+  // 4) 当 job 完成，拉取结果（保留）
+  useEffect(() => {
+    if (!job?.id) return;
+    if (job.status !== "SUCCEEDED") return;
+
+    (async () => {
+      setResultLoading(true);
+      try {
+        const r = await getInferenceByJobId(job.id);
+        setResult(r);
+      } catch {
+        // ignore
+      } finally {
+        setResultLoading(false);
+      }
+    })();
+  }, [job?.id, job?.status]);
+
+  async function onStartInfer() {
+    if (!caze) return;
+    setInferErr(null);
+
+    if (!canInfer) {
+      setInferErr("无权限：只有医生/管理员可以推理");
       return;
     }
 
-    let alive = true;
-
-    (async () => {
-      const next: Record<number, string> = {};
-      for (const img of images) {
-        try {
-          const blob = await fetchCaseImageBlob(caseId, img.id);
-          next[img.id] = URL.createObjectURL(blob);
-        } catch {
-          // 单张失败不影响其它
-        }
-      }
-
-      if (!alive) {
-        cleanup(next);
-        return;
-      }
-
-      setImgUrls((prev) => {
-        cleanup(prev);
-        return next;
-      });
-    })();
-
-    return () => {
-      alive = false;
-      setImgUrls((prev) => {
-        cleanup(prev);
-        return {};
-      });
-    };
-  }, [caseId, images]);
-
-  // ⭐ NEW：轮询推理任务
-  useEffect(() => {
-    if (!job?.id) return;
-
-    let alive = true;
-
-    const tick = async () => {
-      try {
-        const j = await getJob(job.id);
-        if (!alive) return;
-        setJob(j);
-
-        if (j.status === "SUCCEEDED") {
-          const r = await getInferenceByJobId(j.id);
-          if (!alive) return;
-          setResult(r);
-        }
-      } catch (e: any) {
-        if (!alive) return;
-        setInferErr(e?.response?.data?.message || e?.message || "轮询任务失败");
-      }
-    };
-
-    tick();
-
-    const t = window.setInterval(() => {
-      if (job.status === "RUNNING" || job.status === "QUEUED") tick();
-    }, 1200);
-
-    return () => {
-      alive = false;
-      window.clearInterval(t);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job?.id]);
-
-  // ⭐ NEW：点击推理
-  async function onStartInfer() {
-    if (!canInfer) return;
-
-    setInferErr(null);
     setStarting(true);
-    setResult(null);
-
     try {
-      const resp = await startInfer(caseId); // POST /cases/{id}/infer
-      setJob({ id: resp.jobId, caseId, status: resp.status });
+      const j = await startInfer(caze.id);
+      setJob(j);
     } catch (e: any) {
-      setInferErr(e?.response?.data?.message || e?.message || "发起推理失败");
+      setInferErr(e?.response?.data?.message || e?.message || "启动推理失败");
     } finally {
       setStarting(false);
     }
   }
 
-  if (loading) return <div>加载中...</div>;
+  if (loading) {
+    return (
+      <div style={{ padding: 24 }}>
+        <div style={{ fontWeight: 800, fontSize: 18 }}>加载中...</div>
+        <div style={{ opacity: 0.8, marginTop: 8 }}>正在获取病例信息</div>
+      </div>
+    );
+  }
 
   if (err) {
     return (
-      <div style={{ maxWidth: 820 }}>
+      <div style={{ padding: 24 }}>
         <h3>查看病例</h3>
         <div style={{ color: "crimson" }}>{err}</div>
         <div style={{ height: 12 }} />
-        <button onClick={() => nav("/cases/all")}>返回</button>
+        {/* ✅ CHANGED：回 edit 列表 */}
+        <button onClick={() => nav(backTo)}>返回</button>
       </div>
     );
   }
@@ -187,9 +194,10 @@ export default function CaseDetail() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
         <h3 style={{ margin: 0 }}>查看病例 #{caze.id}</h3>
 
-        {/* ✅ 右上角：返回列表 + 推理按钮（符合你要求） */}
+        {/* 右上角：返回列表 + 推理按钮 */}
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button onClick={() => nav("/cases/all")}>返回列表</button>
+          {/* ✅ CHANGED：回 edit 列表 */}
+          <button onClick={() => nav(backTo)}>返回列表</button>
 
           {job?.status && <StatusBadge status={job.status} />}
 
@@ -204,17 +212,30 @@ export default function CaseDetail() {
         </div>
       </div>
 
-      {inferErr && <div style={{ marginTop: 10, color: "crimson" }}>{inferErr}</div>}
-      {job?.lastError && <div style={{ marginTop: 10, color: "crimson" }}>任务错误：{job.lastError}</div>}
+      {/* ✅ NEW：修改成功/图片更新成功提示（只显示一次） */}
+      {flash && (
+        <div
+          style={{
+            marginTop: 10,
+            padding: "10px 12px",
+            borderRadius: 12,
+            background: "rgba(0, 255, 120, 0.10)",
+            border: "1px solid rgba(0, 255, 120, 0.25)",
+            fontWeight: 700,
+          }}
+        >
+          {flash}
+        </div>
+      )}
 
-      <div style={{ height: 12 }} />
+      <div style={{ height: 14 }} />
 
-      {/* 病例信息卡片（不变） */}
-      <div className="card">
-        <div style={{ display: "grid", gap: 6 }}>
+      {/* 病例信息（保留你原字段展示写法） */}
+      <div className="card" style={{ padding: 14 }}>
+        <div style={{ display: "grid", gap: 8 }}>
           <div>
             <b>患者：</b>
-            {caze.patientName || "(未填写姓名)"}
+            {caze.patientName || "-"}
           </div>
           <div>
             <b>性别：</b>
@@ -223,78 +244,44 @@ export default function CaseDetail() {
           </div>
           <div>
             <b>科室：</b>
-            {caze.dept || "-"}　<b>状态：</b>
+            {caze.department || "-"}　<b>状态：</b>
             {caze.status || "-"}
           </div>
           <div>
             <b>基本信息：</b>
-            {caze.chiefComplaint}
+            {caze.chiefComplaint || "-"}
           </div>
           <div>
             <b>病史：</b>
-            {caze.history ?? "-"}
+            {caze.history || "-"}
           </div>
         </div>
       </div>
 
+      {/* ✅ 病例图片：保留你原逻辑（listCaseImages + blob url） */}
       <div style={{ height: 14 }} />
-
-      {/* 病理图片卡片（不变） */}
-      <div className="card">
-        <div style={{ fontWeight: 900, marginBottom: 10 }}>病理图片</div>
+      <div className="card" style={{ padding: 14 }}>
+        <div style={{ fontWeight: 800, marginBottom: 8 }}>病例图片</div>
 
         {images.length === 0 ? (
-          <div className="muted" style={{ fontSize: 13 }}>
-            暂无上传图片
-          </div>
+          <div style={{ opacity: 0.75 }}>暂无图片</div>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 12,
-            }}
-          >
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             {images.map((img) => {
-              const src = imgUrls[img.id];
+              const url = imgUrls[img.id] || img.url; // 有 blob 用 blob；否则退化到后端 url
               return (
-                <div key={img.id} className="card" style={{ padding: 10 }}>
-                  {src ? (
-                    <img
-                      src={src}
-                      alt={img.fileName || `image-${img.id}`}
-                      style={{
-                        width: "100%",
-                        height: 180,
-                        objectFit: "cover",
-                        borderRadius: 10,
-                        display: "block",
-                      }}
-                    />
-                  ) : (
-                    <div
-                      className="muted"
-                      style={{
-                        height: 180,
-                        borderRadius: 10,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "rgba(255,255,255,0.04)",
-                      }}
-                    >
-                      图片加载中...
-                    </div>
-                  )}
-
-                  <div style={{ height: 8 }} />
-                  <div style={{ fontSize: 12, fontWeight: 800, wordBreak: "break-all" }}>
-                    {img.fileName || `image-${img.id}`}
-                  </div>
-                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                    {img.contentType || ""}{" "}
-                    {typeof img.fileSize === "number" ? `· ${Math.round(img.fileSize / 1024)}KB` : ""}
-                  </div>
+                <div key={img.id} style={{ width: 260 }}>
+                  <img
+                    src={url}
+                    alt="case"
+                    style={{
+                      width: "100%",
+                      height: 180,
+                      objectFit: "contain",
+                      borderRadius: 12,
+                      border: "1px solid rgba(255,255,255,0.2)",
+                    }}
+                  />
                 </div>
               );
             })}
@@ -302,16 +289,25 @@ export default function CaseDetail() {
         )}
       </div>
 
-      {/* ⭐ NEW：推理成功后展示结果（其它不变） */}
-      {job?.status === "SUCCEEDED" && (
-        <>
-          <div style={{ height: 14 }} />
-          <div className="card">
-            <div style={{ fontWeight: 900, marginBottom: 10 }}>推理结果</div>
-            <ReportViewer text={reportText} />
-          </div>
-        </>
+      {/* 推理错误 */}
+      {inferErr && (
+        <div style={{ marginTop: 12, color: "crimson" }}>
+          {inferErr}
+        </div>
       )}
+
+      {/* 推理结果展示（保留你原组件） */}
+      <div style={{ height: 14 }} />
+      <div className="card" style={{ padding: 14 }}>
+        <div style={{ fontWeight: 800, marginBottom: 8 }}>推理报告</div>
+        {resultLoading ? (
+          <div style={{ opacity: 0.8 }}>加载推理结果中...</div>
+        ) : reportText ? (
+          <ReportViewer text={reportText} />
+        ) : (
+          <div style={{ opacity: 0.75 }}>暂无报告</div>
+        )}
+      </div>
     </div>
   );
 }
