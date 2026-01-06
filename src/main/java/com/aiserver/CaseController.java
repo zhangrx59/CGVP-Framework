@@ -31,7 +31,6 @@ public class CaseController {
     // 查看所有病例（需要登录：护士/医生/管理员）
     @GetMapping
     public List<CaseDtos.CaseView> listAll() {
-        System.out.println("HIT /cases LIST ALL");
         return caseService.listAll();
     }
 
