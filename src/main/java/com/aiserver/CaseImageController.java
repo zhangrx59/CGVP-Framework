@@ -25,19 +25,17 @@ public class CaseImageController {
         return imageService.upload(caseId, file);
     }
 
-    // ✅ NEW：图片列表（给前端展示用）
-    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
+    // ✅ CHANGED：护士也可以查看图片列表
+    @PreAuthorize("hasAnyRole('NURSE','DOCTOR','ADMIN')") // ✅ CHANGED
     @GetMapping("/{caseId}/images")
     public List<CaseImage> list(@PathVariable Long caseId) {
         return imageService.list(caseId);
     }
 
-    // ✅ NEW：图片二进制（<img src="...">）
-    @PreAuthorize("hasAnyRole('DOCTOR','ADMIN')")
+    // ✅ CHANGED：护士也可以查看图片二进制
+    @PreAuthorize("hasAnyRole('NURSE','DOCTOR','ADMIN')") // ✅ CHANGED
     @GetMapping(value = "/{caseId}/images/{imageId}/raw")
     public ResponseEntity<Resource> raw(@PathVariable Long caseId, @PathVariable Long imageId) throws Exception {
         return imageService.raw(caseId, imageId);
     }
 }
-
-

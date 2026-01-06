@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listAllCases } from "../api/cases";
 import type { CaseView } from "../api/cases";
-
+// ✅ CHANGED
+// import { listAllCases, type CaseView } from "../api/cases";
 export default function InferCases() {
   const nav = useNavigate();
 

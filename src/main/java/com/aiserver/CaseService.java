@@ -40,21 +40,19 @@ public class CaseService {
         return toView(c);
     }
 
-    // ⭐ MODIFIED：只有 DOCTOR/ADMIN 才能查看病例详情
+    // ⭐ MODIFIED：查看病例详情允许 NURSE/DOCTOR/ADMIN
     public CaseDtos.CaseView getById(Long id) {
-        ensureDoctorOrAdmin(); // ⭐ NEW：权限校验
+        ensureCanReadCase(); // ⭐ MODIFIED（原 ensureDoctorOrAdmin）
 
         Case c = caseRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("case not found"));
         return toView(c);
     }
 
-    // ⭐ NEW：删除病例（仅 DOCTOR / ADMIN）
+    // 删除病例（仅 DOCTOR / ADMIN）
     public void deleteById(Long id) {
-        // ⭐ NEW：权限校验
-        ensureDoctorOrAdmin();
+        ensureDoctorOrAdmin(); // ✅ 保持：写权限
 
-        // ⭐ NEW：存在性检查（沿用你现在 getById 的 “case not found” 风格）
         if (!caseRepo.existsById(id)) {
             throw new IllegalArgumentException("case not found");
         }
@@ -62,14 +60,13 @@ public class CaseService {
         caseRepo.deleteById(id);
     }
 
-    // ⭐ NEW：修改病例（仅 DOCTOR / ADMIN）
+    // 修改病例（仅 DOCTOR / ADMIN）
     public CaseDtos.CaseView updateById(Long id, CaseDtos.UpdateReq req) {
-        ensureDoctorOrAdmin(); // ⭐ NEW：复用权限校验（你删功能里已经有/或按下面补一个）
+        ensureDoctorOrAdmin(); // ✅ 保持：写权限
 
         Case c = caseRepo.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("case not found"));
 
-        // ⭐ NEW：按请求覆盖（最小化：全量覆盖，不搞复杂 patch）
         c.setPatientName(req.patientName());
         c.setPatientSex(req.patientSex());
         c.setPatientAge(req.patientAge());
@@ -80,23 +77,34 @@ public class CaseService {
         return toView(c);
     }
 
-
-    // ⭐ NEW：查看所有病例（不限部门），仅 DOCTOR/ADMIN
+    // ⭐ MODIFIED：查看所有病例允许 NURSE/DOCTOR/ADMIN
     public List<CaseDtos.CaseView> listAll() {
-        ensureDoctorOrAdmin(); // ⭐ NEW：权限校验
+        ensureCanReadCase(); // ⭐ MODIFIED（原 ensureDoctorOrAdmin）
 
         return caseRepo.findAll().stream()
                 .map(this::toView)
                 .toList();
     }
 
-    // ⭐ NEW：统一校验权限，避免 controller 分散判断
-    private void ensureDoctorOrAdmin() {
+
+    // ⭐ NEW：读权限（护士也可以）
+    private void ensureCanReadCase() {
         JwtService.JwtUser me = currentUser();
         String role = me.role() == null ? "" : me.role().trim().toUpperCase();
+        if (role.startsWith("ROLE_")) role = role.substring("ROLE_".length());
+
+        if (!role.equals("NURSE") && !role.equals("DOCTOR") && !role.equals("ADMIN")) {
+            throw new SecurityException("no permission");
+        }
+    }
+
+
+    // ✅ CHANGED：写权限仍只允许 DOCTOR/ADMIN，同时用 normRole 兼容 ROLE_
+    private void ensureDoctorOrAdmin() {
+        JwtService.JwtUser me = currentUser();
+        String role = normRole(me.role()); // ✅ CHANGED
 
         if (!role.equals("DOCTOR") && !role.equals("ADMIN")) {
-            // 你的 ApiExceptionHandler 会把 SecurityException 映射为 403
             throw new SecurityException("no permission");
         }
     }
@@ -109,8 +117,7 @@ public class CaseService {
         return (JwtService.JwtUser) auth.getPrincipal();
     }
 
-
-    // ⭐ MODIFIED：兼容 ROLE_ 前缀
+    // 兼容 ROLE_ 前缀
     private String normRole(String role) {
         if (role == null) return "";
         role = role.trim().toUpperCase();

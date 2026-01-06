@@ -13,11 +13,6 @@ export default function AllCases() {
   const canDelete = role === "DOCTOR" || role === "ADMIN"; // ⭐ NEW
 
   useEffect(() => {
-    if (role !== "DOCTOR" && role !== "ADMIN") {
-      setErr("无权限：只有医生/管理员可以查看所有病例");
-      setLoading(false);
-      return;
-    }
 
     (async () => {
       try {

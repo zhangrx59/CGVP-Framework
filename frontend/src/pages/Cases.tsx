@@ -38,6 +38,7 @@ export default function Cases() {
           查看病例
         </button>
 
+        {/* ✅ CHANGED：始终显示，不再按角色隐藏 */}
         <button
           className="landing-btn"
           onClick={() => nav("/cases/edit")}
@@ -46,6 +47,7 @@ export default function Cases() {
           修改病例
         </button>
 
+        {/* ✅ CHANGED：始终显示，不再按角色隐藏 */}
         <button
           className="landing-btn"
           onClick={() => nav("/cases/infer")}
