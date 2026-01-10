@@ -67,6 +67,7 @@ public class InferenceWorker {
 
 
     @Scheduled(fixedDelayString = "${app.queue.poll-ms}")
+    @Transactional
     public void poll() {
         try {
             List<MapRecord<String, Object, Object>> records = redisTemplate.opsForStream().read(
@@ -101,8 +102,6 @@ public class InferenceWorker {
         }
     }
 
-    // ✅ NEW：加事务，保证 delete + save 原子性（避免并发时出现两条）
-    @Transactional // ✅ NEW
     private void processJob(Long jobId) {
         InferenceJob job = jobRepo.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("job not found"));

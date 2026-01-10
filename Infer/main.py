@@ -15,31 +15,16 @@ from pydantic import BaseModel
 from transformers import AutoModelForImageTextToText, AutoProcessor
 from peft import PeftModel
 
-
-def _extract_json_from_text(text: str):
-    # 优先抓 ```json ... ```（如果模型仍然输出了 code fence）
-    m = re.search(r"```json\s*(\{.*?\})\s*```", text, flags=re.DOTALL | re.IGNORECASE)
-    if m:
-        return m.group(1)
-
-    # 其次：找第一个 { 到最后一个 }（适用于带前后废话）
-    start = text.find("{")
-    end = text.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        return text[start:end + 1]
-
-    return None
-
-
-def _safe_float(x, d=0.0):
-    try:
-        return float(x)
-    except Exception:
-        return d
-
-
 # ===== 与训练/评估保持一致的 4 类顺序 =====
 ALLOWED_DX = ["akiec", "bcc", "nev", "mel"]  # :contentReference[oaicite:3]{index=3}
+
+# ⭐ NEW: 英文标签到中文疾病名称的映射，用于展示 & 报告
+DX_ZH_MAP = {
+    "akiec": "日光性角化病",
+    "bcc": "基底细胞癌",
+    "nev": "良性痣",
+    "mel": "黑色素瘤",
+}
 
 # ===== 你 evaluate 里写死的默认超参 =====
 DEFAULT_LOGIT_BIAS = [1.75, 1.0, 0.0, -1.0]  # :contentReference[oaicite:4]{index=4}
@@ -89,43 +74,60 @@ def yn_str(v, yes: str, no: str, unk: str = "unknown") -> str:
         if v != v:  # NaN
             return unk
     except Exception:
-        pass
-    return str(v)
+        return unk
+    return unk
+
+
+def safe_str(x) -> str:
+    if x is None:
+        return "unknown"
+    s = str(x).strip()
+    return s if s else "unknown"
+
+
+def safe_float_str(x) -> str:
+    try:
+        return f"{float(x):.1f}"
+    except Exception:
+        return ""
+
+
+def _validate_required_fields(meta: Dict[str, Any]):
+    """
+    保证 meta 至少有 REQUIRED_FIELDS 这些键，没有就补 "unknown"
+    """
+    for k in REQUIRED_FIELDS:
+        if k not in meta:
+            meta[k] = "unknown"
 
 
 def build_clinical_note(row: Dict[str, Any]) -> str:
     """
-    复刻 evaluate_medgemma.py 的英文病历拼接逻辑（保证对齐）:contentReference[oaicite:7]{index=7} :contentReference[oaicite:8]{index=8}
+    把 20+ 个中文字段拼成英文的临床 note，用于喂进 MedGEMMA :contentReference[oaicite:7]{index=7}
     """
-    age = row.get("年龄", "")
-    sex_raw = str(row.get("性别", "") or "").strip().lower()
-    region = str(row.get("区域", "") or "").strip()
-    father_ori = str(row.get("父籍贯", "") or "").strip()
-    mother_ori = str(row.get("母籍贯", "") or "").strip()
+    age = safe_str(row.get("年龄"))
+    sex = safe_str(row.get("性别"))  # 期待 "男"/"女" 或其他
+    father_ori = safe_str(row.get("父籍贯"))
+    mother_ori = safe_str(row.get("母籍贯"))
 
-    # 性别英文化 :contentReference[oaicite:9]{index=9}
-    if sex_raw in ["男", "male", "m"]:
-        sex_en = "male"
-    elif sex_raw in ["女", "female", "f"]:
-        sex_en = "female"
-    else:
-        sex_en = "unknown"
-
-    skin_ca = yn_str(row.get("皮肤癌病史"), "yes", "no")
-    other_ca = yn_str(row.get("癌症病史"), "yes", "no")
     smoke = yn_str(row.get("是否吸烟"), "yes", "no")
     drink = yn_str(row.get("是否饮酒"), "yes", "no")
-    pesticide = yn_str(row.get("农药"), "yes", "no")
+    pesticide = yn_str(row.get("农药"), "exposed", "not_exposed")
 
-    tap = yn_str(row.get("生活环境是否有自来水"), "yes", "no")
+    skin_cancer_hx = yn_str(row.get("皮肤癌病史"), "yes", "no")
+    cancer_hx = yn_str(row.get("癌症病史"), "yes", "no")
+
+    tap_water = yn_str(row.get("生活环境是否有自来水"), "yes", "no")
     sewer = yn_str(row.get("生活环境是否有下水道"), "yes", "no")
 
-    phototype = row.get("皮肤光型", "")
-    d1 = row.get("直径1", "")
-    d2 = row.get("直径2", "")
+    phototype = safe_str(row.get("皮肤光型"))
+    region = safe_str(row.get("区域"))
 
-    pruritus = yn_str(row.get("瘙痒"), "present", "absent")
-    growth = yn_str(row.get("是否长大"), "present", "absent")
+    d1 = safe_float_str(row.get("直径1"))
+    d2 = safe_float_str(row.get("直径2"))
+
+    itch = yn_str(row.get("瘙痒"), "present", "absent")
+    grow = yn_str(row.get("是否长大"), "present", "absent")
     pain = yn_str(row.get("疼痛"), "present", "absent")
     morph_change = yn_str(row.get("形态变化"), "present", "absent")
     bleeding = yn_str(row.get("出血"), "present", "absent")
@@ -143,91 +145,105 @@ def build_clinical_note(row: Dict[str, Any]) -> str:
     if father_ori or mother_ori:
         origin_str = (
             f"The patient's father is from {father_ori or 'unknown'}, "
-            f"and mother is from {mother_ori or 'unknown'}."
-        )  # :contentReference[oaicite:12]{index=12}
+            f"and the mother is from {mother_ori or 'unknown'}."
+        )
 
-    parts = []
-    parts.append(f"{age}-year-old {sex_en} with a skin lesion on the {region_en}.")  # :contentReference[oaicite:13]{index=13}
-    if size_str:
-        parts.append(size_str)
-    if origin_str:
-        parts.append(origin_str)
+    social_env_str = (
+        f"Tap water: {tap_water}; sewer system: {sewer}. "
+        f"Pesticide exposure: {pesticide}."
+    )
 
-    parts.append(f"Past history of skin cancer: {skin_ca}; other malignancies: {other_ca}.")  # :contentReference[oaicite:14]{index=14}
-    parts.append(f"Lifestyle: smoking {smoke}, alcohol {drink}, pesticide exposure {pesticide}.")  # :contentReference[oaicite:15]{index=15}
-    parts.append(f"Living environment: tap water {tap}, sewer system {sewer}.")  # :contentReference[oaicite:16]{index=16}
-    if phototype_str:
-        parts.append(phototype_str)
+    hx_str = (
+        f"History of skin cancer: {skin_cancer_hx}. "
+        f"History of other cancers: {cancer_hx}."
+    )
 
-    parts.append(
-        "Current symptoms and signs: "
-        f"pruritus {pruritus}, growth {growth}, pain {pain}, "
-        f"morphologic change {morph_change}, bleeding {bleeding}, "
-        f"elevation {elevated}."
-    )  # :contentReference[oaicite:17]{index=17}
+    symptom_str = (
+        f"Itching: {itch}, pain: {pain}, morphological change: {morph_change}, "
+        f"bleeding: {bleeding}, elevated: {elevated}, growth: {grow}."
+    )
 
-    return " ".join(parts)  # :contentReference[oaicite:18]{index=18}
+    cn = (
+            f"Patient is {age} years old, sex: {sex}. "
+            f"Lesion location: {region_en}. "
+            + size_str + " "
+            + phototype_str + " "
+            + origin_str + " "
+            + social_env_str + " "
+            + hx_str + " "
+            + symptom_str
+    )
+
+    cn = re.sub(r"\s+", " ", cn).strip()
+    return cn
 
 
-def _build_report_prompt(clinical_note: str, pred_label: str, probs: dict) -> str:
+class JsonInferReq(BaseModel):
+    clinical_note: str
+    logit_bias: Optional[List[float]] = None
+    mel_thresh: Optional[float] = None
+
+
+class JsonInferResp(BaseModel):
+    pred: str
+    probs: Dict[str, float]
+    raw_text: str
+    report: Dict[str, Any]
+
+
+def _build_json_repair_prompt(pred_label: str, probs: Dict[str, float]) -> str:
+    """
+    当模型输出一段“乱七八糟带 JSON”的文本时，用这个 prompt 让它自己整理成**纯 JSON**。
+    """
     probs_str = ", ".join([f"{k}:{float(v):.4f}" for k, v in probs.items()])
-
     return f"""
-You are a clinical assistant writing a concise decision-support report for clinicians.
+You are an assistant that only outputs one valid JSON object, nothing else.
 
-You will be given:
-1) A clinical note (structured text)
-2) A model classification result (predicted label + probabilities)
+The JSON must have exactly three top-level keys, all in Chinese:
+- "预测标签": string, one of "akiec", "bcc", "nev", "mel"
+- "概率": an object with keys "akiec","bcc","nev","mel" and float values
+- "诊断报告": an object with 2 keys:
+    - "诊断依据": string (Chinese)
+    - "就诊建议": string (Chinese)
 
-STRICT REQUIREMENTS:
-- Output MUST be strict JSON only (no markdown, no code fences, no extra text, no schema, no repeating the prompt).
-- The content of the JSON values MUST be in CHINESE.
-  (You may keep labels as akiec/bcc/nev/mel, but all explanations must be Chinese.)
-- Do NOT invent patient facts not present in the note. If uncertain, say "无法判断/需进一步检查".
-- Keep it concise: 3–6 bullets per list.
+You will be given the model's raw output (possibly mixed with prompts, texts, incomplete JSON, etc.)
+and the final classification result:
 
-JSON schema (field names must match exactly):
-{{
-  "pred_label": "akiec|bcc|nev|mel",
-  "probabilities": {{"akiec":0-1,"bcc":0-1,"nev":0-1,"mel":0-1}},
-  "诊断倾向": "一句话总结(中文)",
-  "主要依据": ["..."],
-  "图像观察要点": ["..."],
-  "鉴别诊断": [{{"疾病":"...","理由":"..."}}],
-  "不确定性与局限": ["..."],
-  "建议下一步": ["..."],
-  "免责声明": "..."
-}}
-
-Clinical note:
-{clinical_note}
-
-Model result:
 pred_label={pred_label}
 probabilities={probs_str}
 
 Now output STRICT JSON ONLY (Chinese values), starting with '{{' and ending with '}}':
 """.strip()
 
-
+# ⭐ CHANGED: 强化诊断依据/就诊建议提示，显式使用中文疾病名与病例要点
 def _build_report_prompt_txt(clinical_note: str, pred_label: str, probs: dict) -> str:
-    probs_str = ", ".join([f"{k}:{float(v):.4f}" for k, v in probs.items()])
+    # ⭐ NEW: 将概率以「中文名称(英文代码):概率」形式提供给模型
+    zh_probs_parts = []
+    for k in ALLOWED_DX:
+        v = float(probs.get(k, 0.0))
+        zh_name = DX_ZH_MAP.get(k, k)
+        zh_probs_parts.append(f"{zh_name}({k}):{v:.4f}")
+    probs_str = ", ".join(zh_probs_parts)
+
+    # ⭐ NEW: 预测类别的中文名
+    zh_pred = DX_ZH_MAP.get(pred_label, pred_label)
+
     return f"""
-        你是临床辅助决策助手。
+        你是面向皮肤科医生的临床辅助决策助手，需要根据【病例描述】和【图像+分类结果】给出结构化的三行中文报告。
 
         你将获得以下信息（禁止编造，不得使用未提供的信息）：
         【病例描述】
         {clinical_note}
 
         【模型预测】
-        预测类别：{pred_label}
+        预测类别：{zh_pred}（内部代码：{pred_label}）
         预测概率：{probs_str}
 
         =====================
         【合格示例】（必须学习其写法）
-        预测标签：akiec:0.0010 bcc:0.9900 nev:0.0050 mel:0.0040
-        诊断依据：模型预测基底细胞癌概率较高；病例为面部皮损，尺寸约8×6 mm，存在生长及形态改变但无出血和疼痛，符合基底细胞癌常见临床表现。
-        就诊建议：建议皮肤科就诊，行皮肤镜检查；如存在可疑特征，建议进一步活检明确诊断。
+        预测标签：{{日光性角化病:0.0010 基底细胞癌:0.9900 良性痣:0.0050 黑色素瘤:0.0040}}
+        诊断依据：模型预测基底细胞癌概率最高；病变位于暴露部位面部，大小约 8×6 mm，为慢性进展性局限性斑块/结节，边界清楚但可见表面光亮与毛细血管扩张，无明显瘙痒、疼痛或出血，这些特征与基底细胞癌常见的临床和皮肤镜表现相符，同时缺乏黑色素瘤所见的明显结构紊乱和多色性。
+        就诊建议：建议尽快至皮肤科进一步完善皮肤镜及必要时切取活检以明确病理；如病理提示基底细胞癌，可根据病灶大小与部位选择局部手术切除或显微外科（莫氏手术），如无法手术可考虑局部药物或物理治疗（如外用免疫调节剂或光/放射/光动力治疗），具体方案由专科医生结合患者全身情况决定。
 
         【不合格示例】（严禁这样写）
         诊断依据：模型预测为基底细胞癌，概率为99%。
@@ -235,16 +251,19 @@ def _build_report_prompt_txt(clinical_note: str, pred_label: str, probs: dict) -
         =====================
 
         【你的任务】
-        请严格模仿【合格示例】的风格，输出 **仅三行中文纯文本**，格式如下（前缀必须一致）：
+        请严格模仿【合格示例】的风格，输出 **仅两行中文纯文本**，格式如下（前缀必须一致）：
 
-        预测标签：akiec:... bcc:... nev:... mel:...
-        诊断依据：必须同时包含【模型结果】+【至少两个病例要点（如部位/大小/症状/变化/否定症状）】
-        就诊建议：1-2句话；不要给出具体药物剂量；可建议皮肤科就诊、皮肤镜检查、必要时活检
+        诊断依据：必须**综合说明**【模型预测结果】与【至少 2–3 个关键病例要点】，包括但不限于：病变部位、大小和形态、颜色/结构特点、是否进展或发生形态变化、有无瘙痒/疼痛/出血等阴性症状，以及这些信息如何支持或反对当前诊断和主要鉴别诊断。
+        就诊建议：用 1–3 句话，面向皮肤科医生，需同时包含：
+          - 进一步检查方案（如皮肤镜、活检、随访复查等）；
+          - 至少三种可行的治疗路径（如随访观察、局部药物治疗、冷冻/激光/光动力、手术切除等），可举例药物的具体类别和治疗方式；
+          - 如怀疑恶性病变（特别是黑色素瘤），需明确提出尽快手术切除或转诊专科中心的建议。
+        表达需专业，不要使用口语化表达。
 
         注意：
-        - 如果病例信息为“否/unknown”，请如实写“无/无法判断”
-        - 禁止只写模型概率而不提病例
-        - 不要输出任何多余内容
+        - 如果病例信息为“否/unknown”，请如实写“无/无法判断”或说明信息有限；
+        - 禁止只写模型概率而不提病例细节；
+        - 禁止输出任何与以上两行无关的额外内容（如“我是 AI 模型”“请咨询医生”等提示语）。
         """.strip()
 
 
@@ -258,13 +277,25 @@ def _extract_two_lines(raw: str) -> tuple[str, str]:
     """
     # ✅ CHANGED: 更强的清洗，避免把 prompt/user/model 混进来
     if not raw:
-        return ("", "")
+        return "", ""
 
     text = raw.strip()
 
-    # ✅ CHANGED: 如果输出里出现 user/model，对话模板，尽量只取最后一次 "诊断依据/就诊建议" 之后的部分
-    idx = text.rfind("诊断依据")
-    if idx != -1:
+    # 如果有 markdown 代码块，先去掉 ```...``` 包裹
+    if "```" in text:
+        parts = text.split("```")
+        # 通常模型会把内容放在第 2 段
+        if len(parts) >= 2:
+            text = parts[1].strip()
+
+    # 去掉明显的 prompt 残留，例如 "User:", "Assistant:", "系统提示"
+    # 这里只做一个简单规则：从第一个出现 "诊断依据" 或 "就诊建议" 的地方开始截断
+    idx = len(text)
+    for key in ["诊断依据", "就诊建议"]:
+        k = text.find(key)
+        if k != -1:
+            idx = min(idx, k)
+    if idx != len(text):
         text = text[idx:]
 
     m_idx = text.lower().rfind("\nmodel")
@@ -284,51 +315,313 @@ def _extract_two_lines(raw: str) -> tuple[str, str]:
     if m2:
         advice = m2.group(1).strip()
 
-    if basis:
-        basis = basis.splitlines()[0].strip()
-    if advice:
-        advice = advice.splitlines()[0].strip()
+    if basis and advice:
+        return basis, advice
 
-    if not basis or not advice:
-        lines = [ln.strip() for ln in raw.splitlines() if ln.strip()]
-        if len(lines) >= 2:
-            fallback_basis = lines[-2]
-            fallback_adv = lines[-1]
-            if not basis:
-                basis = fallback_basis
-            if not advice:
-                advice = fallback_adv
-        elif len(lines) == 1:
-            if not basis:
-                basis = lines[0]
-            if not advice:
-                advice = lines[0]
-
-    for bad in ["user", "model", "You are", "clinical assistant", "Task:"]:
-        if basis.lower().startswith(bad.lower()):
-            basis = ""
-        if advice.lower().startswith(bad.lower()):
-            advice = ""
-
-    return (basis.strip(), advice.strip())
+    lines_ = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    if len(lines_) >= 2:
+        return lines_[0], lines_[1]
+    if len(lines_) == 1:
+        return lines_[0], ""
+    return "", ""
 
 
-def _generate_report_text(prompt: str, image, max_new_tokens: int = 220) -> str:
-    messages = [
-        {"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image", "image": image}]}
-    ]
-    prompt_text = PROCESSOR.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-    inputs = PROCESSOR(text=[prompt_text], images=[image], return_tensors="pt").to(DEVICE)
+def _extract_proba_json(raw_text: str) -> Optional[str]:
+    """
+    从模型输出中，尽量抽取出 {...} 这一段 JSON，并返回字符串；失败则 None
+    """
+    if not raw_text:
+        return None
+
+    if raw_text.strip().startswith("{") and raw_text.strip().endswith("}"):
+        return raw_text.strip()
+
+    start = raw_text.find("{")
+    end = raw_text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return raw_text[start:end + 1]
+
+    for line in raw_text.splitlines():
+        s = line.strip()
+        if s.startswith("{") and s.endswith("}"):
+            return s
+
+    text = raw_text
+    idx = 10**9
+    for w in ["{\"", "{\n\"", "{\r\n\""]:
+        k = text.find(w)
+        if k != -1:
+            idx = min(idx, k)
+    if idx != 10**9:
+        text = text[idx:]
+
+    m_idx = text.lower().rfind("\nmodel")
+    if m_idx != -1:
+        tail = text[m_idx:]
+        if "{" in tail and "}" in tail:
+            s = tail[tail.find("{"): tail.rfind("}") + 1]
+            return s.strip()
+
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start:end + 1]
+
+    return None
+
+
+def _safe_float(x, d=0.0):
+    try:
+        return float(x)
+    except Exception:
+        return d
+
+
+def _repair_json_dict(raw_text: str, pred_label: str, probs: Dict[str, float]) -> Dict[str, Any]:
+    """
+    若模型输出的 “JSON” 不合法，用第二次调用把它修成合法 JSON
+    """
+    s = _extract_proba_json(raw_text)
+    if s is not None:
+        try:
+            obj = json.loads(s)
+            if isinstance(obj, dict):
+                return obj
+        except Exception:
+            pass
+
+    prompt = _build_json_repair_prompt(pred_label, probs)
+    fixed = _generate_report_text(prompt, None, max_new_tokens=260)
+    try:
+        return json.loads(fixed)
+    except Exception:
+        return {
+            "预测标签": pred_label,
+            "概率": probs,
+            "诊断报告": {
+                "诊断依据": "模型输出无法解析，仅保留分类结果，请结合临床判断。",
+                "就诊建议": "建议至皮肤科就诊，结合病史、体检及必要的辅助检查综合判断。",
+            },
+        }
+
+
+# ⭐ CHANGED: 让多模态 prompt 里真正包含图片占位符，避免 0 image tokens 错误
+def _generate_report_text(prompt: str, image: Optional[Image.Image], max_new_tokens: int = 256) -> str:
+    """
+    调用 MedGEMMA / LoRA 生成一段文本（可能是 JSON，也可能是自然语言）
+    这里根据是否有 image，构造带 image token 的 chat 模板。
+    """
+    global MODEL, PROCESSOR, DEVICE
+
+    if MODEL is None or PROCESSOR is None:
+        raise RuntimeError("MODEL/PROCESSOR not loaded.")
+
+    # ⭐ NEW: Gemma3 多模态推荐的 messages 结构
+    if image is not None:
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image"},
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+    else:
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                ],
+            }
+        ]
+
+    # 这里会把 "image" 那一段转换成一个专门的 <image> token
+    text = PROCESSOR.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        tokenize=False,
+    )
+
+    # ⭐ CHANGED: 只有在 prompt 里有 image token 时才传 images
+    if image is not None:
+        inputs = PROCESSOR(
+            text=[text],
+            images=[image],
+            return_tensors="pt",
+        ).to(DEVICE)
+    else:
+        inputs = PROCESSOR(
+            text=[text],
+            return_tensors="pt",
+        ).to(DEVICE)
 
     with torch.no_grad():
-        gen_ids = MODEL.generate(
+        out = MODEL.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
             do_sample=False,
         )
 
-    out = PROCESSOR.tokenizer.decode(gen_ids[0], skip_special_tokens=True)
-    return out
+    gen_text = PROCESSOR.decode(out[0], skip_special_tokens=True)
+    return gen_text
+
+
+# ⭐ CHANGED: 使用多模态 chat 模板，保证 prompt 中包含 image token
+def _linear_logits_predict(
+        image: Image.Image,
+        clinical_note: str,
+        logit_bias: Optional[List[float]] = None,
+        mel_thresh: Optional[float] = None,
+):
+    """
+    使用“线性 logits + 可调 bias + mel 阈值”来做 4 类分类
+    保持与你原来的 evaluate 逻辑一致，只是改成 Gemma3 推荐的多模态 messages 写法。
+    """
+    global MODEL, PROCESSOR, DEVICE, LABEL_TOKEN_IDS, MEL_IDX
+
+    if MODEL is None or PROCESSOR is None or LABEL_TOKEN_IDS is None:
+        raise RuntimeError("MODEL/PROCESSOR/LABEL_TOKEN_IDS not loaded.")
+
+    # ⭐ NEW: 多模态 messages，包含 image + text 两个片段
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image"},
+                {
+                    "type": "text",
+                    "text": (
+                        "You are a dermatology assistant.\n"
+                        "Given the clinical note and the skin lesion image, "
+                        "your task is to classify the lesion into one of the following classes: "
+                        "akiec, bcc, nev, mel.\n"
+                        "Always answer with exactly one lowercase class name in English.\n\n"
+                        f"Clinical note:\n{clinical_note}\n"
+                    ),
+                },
+            ],
+        }
+    ]
+
+    # 让模板自动插入一个 <image> token
+    prompt_text = PROCESSOR.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        tokenize=False,
+    )
+
+    # ⭐ CHANGED: prompt 里有 1 个 image token，因此这里传 1 张 image，数量匹配
+    inputs = PROCESSOR(
+        text=[prompt_text],
+        images=[image],
+        return_tensors="pt",
+    ).to(DEVICE)
+
+    with torch.no_grad():
+        out = MODEL.generate(
+            **inputs,
+            max_new_tokens=1,
+            output_scores=True,
+            return_dict_in_generate=True,
+            do_sample=False,
+        )
+
+    # 取最后一步的 logits
+    last_scores = out.scores[0][0]  # [vocab_size]
+
+    # 只抽取我们关心的 4 个标签的 logits
+    logits_4 = torch.stack([last_scores[idx] for idx in LABEL_TOKEN_IDS])
+
+    # ⭐ CHANGED: 兼容可选 logit_bias / mel_thresh
+    if logit_bias is None:
+        bias = torch.tensor(DEFAULT_LOGIT_BIAS, device=logits_4.device, dtype=logits_4.dtype)
+    else:
+        if len(logit_bias) != 4:
+            raise ValueError("logit_bias must have length 4")
+        bias = torch.tensor(logit_bias, device=logits_4.device, dtype=logits_4.dtype)
+
+    logits_biased = logits_4 + bias
+    probs_4 = torch.softmax(logits_biased, dim=-1)  # [4]
+
+    mel_idx = MEL_IDX
+    mel_prob = float(probs_4[mel_idx].item())
+    thresh = DEFAULT_MEL_THRESH if mel_thresh is None else float(mel_thresh)
+
+    pred_idx = int(torch.argmax(probs_4).item())
+    # ⭐ 保留你原来“mel 自信度不够就降权重选其他类”的逻辑
+    if pred_idx == mel_idx and mel_prob < thresh:
+        tmp = probs_4.clone()
+        tmp[mel_idx] = -1e9
+        pred_idx = int(torch.argmax(tmp).item())
+
+    pred_label = ALLOWED_DX[pred_idx]
+    probs = {c: float(p) for c, p in zip(ALLOWED_DX, probs_4.detach().float().cpu().tolist())}
+    return pred_label, probs
+
+
+@app.on_event("startup")
+def _load_model():
+    global MODEL, PROCESSOR, DEVICE, LABEL_TOKEN_IDS
+
+    DEVICE, dtype = _pick_device_dtype()
+
+    base_model = AutoModelForImageTextToText.from_pretrained(
+        BASE_MODEL,
+        torch_dtype=dtype,
+        device_map=None,
+    )
+
+    MODEL = PeftModel.from_pretrained(
+        base_model,
+        LORA_DIR,
+        torch_dtype=dtype,
+    ).to(DEVICE)
+
+    PROCESSOR = AutoProcessor.from_pretrained(BASE_MODEL)
+
+    label_token_ids = {}
+    for cls in ALLOWED_DX:
+        tokens = PROCESSOR.tokenizer.encode(cls, add_special_tokens=False)
+        if not tokens:
+            raise RuntimeError(f"Cannot encode label {cls} into token ID.")
+        label_token_ids[cls] = tokens[0]
+
+    LABEL_TOKEN_IDS = [label_token_ids[c] for c in ALLOWED_DX]
+    print(f"[startup] MODEL loaded on {DEVICE}, label token ids = {LABEL_TOKEN_IDS}")
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "device": str(DEVICE), "labels": ALLOWED_DX}
+
+
+@app.post("/infer_json", response_model=JsonInferResp)
+def infer_json(req: JsonInferReq):
+    if MODEL is None:
+        raise HTTPException(status_code=503, detail="model not loaded")
+
+    pil = Image.new("RGB", (224, 224), color=(128, 128, 128))
+
+    pred, probs = _linear_logits_predict(
+        pil,
+        req.clinical_note,
+        logit_bias=req.logit_bias,
+        mel_thresh=req.mel_thresh,
+    )
+
+    prompt = _build_report_prompt_txt(req.clinical_note, pred, probs)
+    raw_text = _generate_report_text(prompt, pil, max_new_tokens=300)
+
+    report_dict = _repair_json_dict(raw_text, pred, probs)
+
+    return JsonInferResp(
+        pred=pred,
+        probs=probs,
+        raw_text=raw_text,
+        report=report_dict,
+    )
 
 
 @app.post("/infer_report_multipart_txt", response_class=PlainTextResponse)  # ✅ CHANGED: 明确返回纯文本
@@ -349,13 +642,26 @@ async def infer_report_multipart_txt(
 
     _validate_required_fields(meta)
 
+    if "临床描述" in meta and isinstance(meta["临床描述"], str):
+        clinical_note_extra = meta["临床描述"]
+    else:
+        clinical_note_extra = ""
+
+    row_for_cn = dict(meta)
+    cn_base = build_clinical_note(row_for_cn)
+    if clinical_note_extra:
+        cn = cn_base + " Additional note: " + clinical_note_extra
+    else:
+        cn = cn_base
+
+    clinical_note = cn
+
     try:
         img_bytes = await image.read()
         pil = Image.open(io.BytesIO(img_bytes)).convert("RGB")
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"image 读取失败: {e}")
 
-    # 参数解析（保持你原逻辑不动）
     if logit_bias is None:
         bias = DEFAULT_LOGIT_BIAS
     else:
@@ -369,27 +675,25 @@ async def infer_report_multipart_txt(
 
     thr = DEFAULT_MEL_THRESH if mel_thresh is None else float(mel_thresh)
 
-    # A) clinical note + 分类
     clinical_note = build_clinical_note(meta)
     pred, probs = _linear_logits_predict(pil, clinical_note, bias, thr)
 
-    # ✅ CHANGED: 这里补上 probs_line 的定义（之前未定义导致 IDE 报错/运行报错）
-    probs_line = " ".join([f"{k}:{float(probs.get(k, 0.0)):.6f}" for k in ALLOWED_DX])  # ✅ CHANGED
+    # ⭐ CHANGED: 使用中文疾病名构造概率行
+    probs_line = " ".join(
+        f"{DX_ZH_MAP.get(k, k)}:{float(probs.get(k, 0.0)):.6f}"
+        for k in ALLOWED_DX
+    )
 
-    # B) 生成报告 raw 文本（可能包含 prompt / user / model）
     report_prompt = _build_report_prompt_txt(clinical_note, pred, probs)
     raw_text = _generate_report_text(report_prompt, pil)
 
-    # ✅ CHANGED: 抽取两行内容，避免 prompt 泄漏
     basis, advice = _extract_two_lines(raw_text)
 
-    # ✅ CHANGED: 兜底
     if not basis:
         basis = "依据图像特征与模型分类结果综合判断，建议结合皮肤镜/病理检查进一步确认。"
     if not advice:
         advice = "建议至皮肤科就诊，完善皮肤镜检查，必要时进行活检以明确诊断。"
 
-    # ✅ CHANGED: 严格三行输出
     txt = (
         f"预测标签：{{{probs_line}}}\n"
         f"诊断依据：{basis}\n"
@@ -418,185 +722,25 @@ Task:
 - All explanatory text inside JSON values MUST be Chinese.
 - Keep it concise.
 
-Here is the original output:
+The JSON structure you MUST output:
+
+{{
+  "预测标签": "<string: akiec|bcc|nev|mel>",
+  "概率": {{
+    "akiec": <float>,
+    "bcc": <float>,
+    "nev": <float>,
+    "mel": <float>
+  }},
+  "诊断报告": {{
+    "诊断依据": "<Chinese string>",
+    "就诊建议": "<Chinese string>"
+  }}
+}}
+
+Now, based on the following raw model output, output ONE valid JSON object ONLY:
 {raw_text}
-
-Now output the repaired JSON only, starting with '{{' and ending with '}}':
 """.strip()
-
-
-def _generate_report_json(report_prompt: str, image, max_new_tokens: int = 700) -> dict:
-    # 第一次生成（带图像）
-    messages = [
-        {"role": "user", "content": [{"type": "text", "text": report_prompt}, {"type": "image", "image": image}]}
-    ]
-    prompt_text = PROCESSOR.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-    inputs = PROCESSOR(text=[prompt_text], images=[image], return_tensors="pt").to(DEVICE)
-
-    with torch.no_grad():
-        gen_ids = MODEL.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,
-            do_sample=False,
-        )
-
-    text = PROCESSOR.tokenizer.decode(gen_ids[0], skip_special_tokens=True)
-
-    cand = _extract_json_from_text(text)
-    if cand:
-        try:
-            return json.loads(cand)
-        except Exception:
-            pass
-
-    # 失败：第二次让模型“只修复 JSON”（不带图像也行，速度更快）
-    repair_prompt = _repair_to_json_only(text)
-    repair_messages = [{"role": "user", "content": [{"type": "text", "text": repair_prompt}]}]
-    repair_text = PROCESSOR.apply_chat_template(repair_messages, add_generation_prompt=True, tokenize=False)
-    repair_inputs = PROCESSOR(text=[repair_text], return_tensors="pt").to(DEVICE)
-
-    with torch.no_grad():
-        repair_ids = MODEL.generate(
-            **repair_inputs,
-            max_new_tokens=500,
-            do_sample=False,
-            temperature=0.0,  # 修复阶段更“死板”更稳
-        )
-
-    repair_out = PROCESSOR.tokenizer.decode(repair_ids[0], skip_special_tokens=True)
-    cand2 = _extract_json_from_text(repair_out)
-    if cand2:
-        try:
-            return json.loads(cand2)
-        except Exception:
-            pass
-
-    return {"raw_text": text}
-
-
-@app.on_event("startup")
-def _startup_load_model():
-    global MODEL, PROCESSOR, DEVICE, LABEL_TOKEN_IDS
-
-    DEVICE, dtype = _pick_device_dtype()
-
-    base_model = AutoModelForImageTextToText.from_pretrained(
-        BASE_MODEL,
-        torch_dtype=dtype,
-    )
-    MODEL = PeftModel.from_pretrained(base_model, LORA_DIR).to(DEVICE)
-    MODEL.eval()
-
-    PROCESSOR = AutoProcessor.from_pretrained(LORA_DIR)
-    PROCESSOR.tokenizer.padding_side = "right"  # :contentReference[oaicite:20]{index=20}
-
-    # 计算 4 类标签首 token id（与 evaluate 保持一致）:contentReference[oaicite:21]{index=21}
-    ids = []
-    for cls in ALLOWED_DX:
-        tok = PROCESSOR.tokenizer(cls, add_special_tokens=False)["input_ids"]
-        if not tok:
-            raise RuntimeError(f"label '{cls}' token ids empty")
-        ids.append(tok[0])
-    LABEL_TOKEN_IDS = torch.tensor(ids, device=DEVICE)
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok", "device": str(DEVICE), "modelLoaded": MODEL is not None}
-
-
-def _build_prompt(clinical_note: str, image: Image.Image) -> str:
-    """
-    复刻 evaluate 的 chat_template，末尾必须含 Final answer: :contentReference[oaicite:22]{index=22}
-    """
-    messages = [
-        {
-            "role": "system",
-            "content": [
-                {
-                    "type": "text",
-                    "text": (
-                        "You are a dermatology assistant. "
-                        "Given the clinical note and the skin lesion image, "
-                        "your task is to classify the lesion into one of the following classes: "
-                        "akiec, bcc, nev, mel. "
-                        "Always answer with exactly one lowercase class name "
-                        "from this set, with no explanations."
-                    ),
-                }
-            ],
-        },
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": (
-                        f"Clinical note:\n{clinical_note}\n\n"
-                        "Based on the clinical note and the provided skin lesion image, "
-                        "predict the most likely disease class.\n"
-                        "Answer with only one class name:\n"
-                        "akiec, bcc, nev, mel.\n"
-                        "Final answer:"
-                    ),
-                },
-                {"type": "image", "image": image},
-            ],
-        },
-    ]
-
-    return PROCESSOR.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=False,
-    )
-
-
-def _linear_logits_predict(
-        image: Image.Image,
-        clinical_note: str,
-        logit_bias: List[float],
-        mel_thresh: float
-) -> (str, Dict[str, float]):
-    """
-    严格复刻 evaluate 的线性 logits 推理：last_logits -> logits_4 -> +bias -> softmax -> mel gate :contentReference[oaicite:23]{index=23}
-    """
-    prompt_text = _build_prompt(clinical_note, image)
-
-    inputs = PROCESSOR(
-        text=[prompt_text],
-        images=[image],
-        return_tensors="pt",
-    ).to(DEVICE)
-
-    with torch.no_grad():
-        outputs = MODEL(**inputs)  # 不 generate :contentReference[oaicite:24]{index=24}
-
-    last_logits = outputs.logits[0, -1, :]  # :contentReference[oaicite:25]{index=25}
-    logits_4 = last_logits[LABEL_TOKEN_IDS]  # :contentReference[oaicite:26]{index=26}
-    logits_4 = logits_4 + torch.tensor(logit_bias, device=DEVICE)
-
-    probs_4 = torch.softmax(logits_4, dim=-1)
-    pred_idx = int(torch.argmax(probs_4).item())
-
-    if pred_idx == MEL_IDX and float(probs_4[MEL_IDX]) < mel_thresh:  # :contentReference[oaicite:27]{index=27}
-        tmp_logits = logits_4.clone()
-        tmp_logits[MEL_IDX] -= 1.0
-        probs_4 = torch.softmax(tmp_logits, dim=-1)
-        pred_idx = int(torch.argmax(probs_4).item())
-
-    pred_label = ALLOWED_DX[pred_idx]
-    probs = {c: float(p) for c, p in zip(ALLOWED_DX, probs_4.detach().float().cpu().tolist())}
-    return pred_label, probs
-
-
-def _validate_required_fields(meta: Dict[str, Any]):
-    missing = [k for k in REQUIRED_FIELDS if k not in meta]
-    if missing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"meta json 缺少字段: {missing} (必须严格包含全部字段)"
-        )
 
 
 @app.post("/infer_report_multipart")
@@ -623,7 +767,6 @@ async def infer_report_multipart(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"image 读取失败: {e}")
 
-    # 解析参数
     if logit_bias is None:
         bias = DEFAULT_LOGIT_BIAS
     else:
@@ -637,15 +780,18 @@ async def infer_report_multipart(
 
     thr = DEFAULT_MEL_THRESH if mel_thresh is None else float(mel_thresh)
 
-    # A) 生成 clinical note + 分类 probs
     clinical_note = build_clinical_note(meta)
     pred, probs = _linear_logits_predict(pil, clinical_note, bias, thr)
 
-    # B) 生成报告
-    report_prompt = _build_report_prompt_txt(clinical_note, pred, probs)
-    txt = _generate_report_text(report_prompt, pil, max_new_tokens=220)  # 直接生成纯文本
+    # ⭐ CHANGED: 使用中文疾病名构造概率行
+    probs_line = " ".join(
+        f"{DX_ZH_MAP.get(k, k)}:{float(probs.get(k, 0.0)):.6f}"
+        for k in ALLOWED_DX
+    )
 
-    probs_line = " ".join([f"{k}:{float(probs.get(k, 0.0)):.6f}" for k in ALLOWED_DX])
-    out = f"预测标签：{{{probs_line}}}\n{txt.strip()}\n"
+    report_prompt = _build_report_prompt_txt(clinical_note, pred, probs)
+    raw_text = _generate_report_text(report_prompt, pil, max_new_tokens=220)  # 直接生成纯文本
+
+    out = f"预测标签：{{{probs_line}}}\n{raw_text.strip()}\n"
 
     return Response(content=out, media_type="text/plain; charset=utf-8")
