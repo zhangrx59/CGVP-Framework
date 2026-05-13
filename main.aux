@@ -1,0 +1,162 @@
+\relax 
+\emailauthor{xiongch8@mail.sysu.edu.cn}{Chen Xiong\corref {cor1}}
+\Newlabel{cor1}{1}
+\Newlabel{label1}{a}
+\Newlabel{label2}{b}
+\citation{yu2017melanoma,hosny2022refined,wu2020skin}
+\citation{pacheco2020impact,khurshid2025multimodal}
+\citation{li2020fusing,pacheco2021attention,khurshid2024optimizing}
+\citation{watson2026multimodal}
+\citation{zhu2026concept,zeng2025mmskin}
+\citation{sellergren2025medgemma}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{2}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Examples of (a) intra-class variability within the MEL class and (b) inter-class similarity across the MEL, NEV, SEK, and BCC classes.}}{3}{}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{figure1}{{1}{3}{}{figure.1}{}}
+\citation{tschandl2018ham10000,pacheco2020padufes20}
+\citation{esteva2017dermatologist,codella2019skin}
+\citation{yu2017melanoma,hosny2022refined,wu2020skin}
+\citation{simonyan2014very,he2016deep,huang2017densely,tan2019efficientnet,sandler2018mobilenetv2}
+\citation{brinker2019deep}
+\citation{pacheco2020impact}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related works}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Skin lesion classification methods}{4}{}\protected@file@percent }
+\citation{pacheco2020impact}
+\citation{li2020fusing}
+\citation{pacheco2021attention}
+\citation{khurshid2024optimizing}
+\citation{khurshid2025multimodal}
+\citation{radford2021learning}
+\citation{wang2022medclip}
+\citation{zhang2023biomedclip}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Metadata fusion methods}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}MVLM-based methods}{5}{}\protected@file@percent }
+\citation{li2023llavamed}
+\citation{sellergren2025medgemma}
+\citation{zeng2025mmskin}
+\citation{yan2025derm1m}
+\citation{yan2025multimodal}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Overview of the proposed framework}{6}{}\protected@file@percent }
+\newlabel{fig:cgvp-medgemma-a}{{2a}{7}{}{subfigure.2.1}{}}
+\newlabel{sub@fig:cgvp-medgemma-a}{{a}{7}{}{subfigure.2.1}{}}
+\newlabel{fig:cgvp-medgemma-b}{{2b}{7}{}{subfigure.2.2}{}}
+\newlabel{sub@fig:cgvp-medgemma-b}{{b}{7}{}{subfigure.2.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Overview of the proposed CGVP-MedGemma framework. (a) Multimodal diagnostic branch (MedGemma-4B-IT) and (b) visual prior branch.}}{7}{}\protected@file@percent }
+\newlabel{figure2}{{2}{7}{}{figure.2}{}}
+\citation{sellergren2025medgemma}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Problem formulation}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Multimodal input construction}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Parameter-efficient MVLM adaptation}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}Backbone selection}{8}{}\protected@file@percent }
+\citation{hu2022lora}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}Low-rank adaptation}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.3}Closed-set classification head}{10}{}\protected@file@percent }
+\citation{woo2018cbam}
+\citation{lin2017focal}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.4}Classification objective}{11}{}\protected@file@percent }
+\newlabel{eq:cls_loss}{{6}{11}{}{equation.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Confidence-gated visual prior consistency}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}Visual prior branch architecture}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}Confidence-gated consistency regularization}{12}{}\protected@file@percent }
+\newlabel{eq:gated_set}{{9}{12}{}{equation.9}{}}
+\newlabel{eq:kl_gated}{{10}{12}{}{equation.10}{}}
+\citation{tschandl2018ham10000,pacheco2020padufes20}
+\citation{pacheco2020padufes20}
+\citation{tschandl2018ham10000}
+\newlabel{eq:total_loss}{{11}{13}{}{equation.11}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Datasets}{13}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Class distribution of PAD-UFES-20 and HAM10000.}}{13}{}\protected@file@percent }
+\newlabel{table1}{{1}{13}{}{table.1}{}}
+\citation{vo2026explainability,ryan2025does,el2026moving}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Evaluation metrics}{14}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Experimental setup}{14}{}\protected@file@percent }
+\newlabel{4.3}{{4.3}{14}{}{subsection.4.3}{}}
+\citation{simonyan2014very,he2016deep,tan2019efficientnet,sandler2018mobilenetv2,huang2017densely}
+\citation{pacheco2020impact,khurshid2025multimodal,li2020fusing,pacheco2021attention,khurshid2024optimizing}
+\citation{simonyan2014very}
+\citation{he2016deep}
+\citation{tan2019efficientnet}
+\citation{sandler2018mobilenetv2}
+\citation{huang2017densely}
+\citation{pacheco2020impact}
+\citation{li2020fusing}
+\citation{pacheco2021attention}
+\citation{khurshid2024optimizing}
+\citation{khurshid2025multimodal}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Visual prior branch configuration}{15}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Performance comparison of five backbones combined with six metadata fusion methods on PAD-UFES-20.}}{15}{}\protected@file@percent }
+\newlabel{table2}{{2}{15}{}{table.2}{}}
+\citation{li2023llavamed,zeng2025mmskin,yan2025derm1m}
+\citation{li2023llavamed}
+\citation{zeng2025mmskin}
+\citation{yan2025derm1m}
+\citation{yan2025derm1m}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Comparison with representative MVLM methods}{16}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Performance comparison of representative MVLMs on PAD-UFES-20 and direct cross-dataset evaluation on the mapped HAM10000 subset.}}{16}{}\protected@file@percent }
+\newlabel{table3}{{3}{16}{}{table.3}{}}
+\newlabel{fig:confusion-matrx-pad}{{3a}{17}{}{subfigure.3.1}{}}
+\newlabel{sub@fig:confusion-matrx-pad}{{a}{17}{}{subfigure.3.1}{}}
+\newlabel{fig:confusion-matrx-ham}{{3b}{17}{}{subfigure.3.2}{}}
+\newlabel{sub@fig:confusion-matrx-ham}{{b}{17}{}{subfigure.3.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Confusion matrices of CGVP-MedGemma on (a) PAD-UFES-20 and (b) HAM10000.}}{17}{}\protected@file@percent }
+\newlabel{confusion matrix}{{3}{17}{}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Ablation studies}{17}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.1}Component-wise ablation}{17}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Step-wise ablation of the training strategy on PAD-UFES-20.}}{18}{}\protected@file@percent }
+\newlabel{table4}{{4}{18}{}{table.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.2}Clinical metadata ablation}{18}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Training and validation loss curves over 15 epochs on PAD-UFES-20. Training total loss $\mathcal  {L}$, classification loss $\mathcal  {L}_{cls}$, KL consistency loss $\mathcal  {L}_{KL}$, and validation total loss $\mathcal  {L}$ are shown.}}{19}{}\protected@file@percent }
+\newlabel{figure4}{{4}{19}{}{figure.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Performance of different metadata on PAD-UFES-20.}}{19}{}\protected@file@percent }
+\newlabel{table5}{{5}{19}{}{table.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.3}Qualitative analysis of visual attention}{20}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces GradCAM attention maps for representative samples from PAD-UFES-20. Row 1: original images. Row 2: attention before KL regularization. Row 3: attention after KL regularization.}}{20}{}\protected@file@percent }
+\newlabel{figure5}{{5}{20}{}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Hyperparameter sensitivity analysis}{21}{}\protected@file@percent }
+\newlabel{fig:method3-a}{{6a}{21}{}{subfigure.6.1}{}}
+\newlabel{sub@fig:method3-a}{{a}{21}{}{subfigure.6.1}{}}
+\newlabel{fig:method3-b}{{6b}{21}{}{subfigure.6.2}{}}
+\newlabel{sub@fig:method3-b}{{b}{21}{}{subfigure.6.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Sensitivity analysis of regularization weight $\lambda $ and confidence threshold $\tau $ on PAD-UFES-20 in terms of (a) ACC and (b) BACC.}}{21}{}\protected@file@percent }
+\newlabel{figure3}{{6}{21}{}{figure.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion}{21}{}\protected@file@percent }
+\bibstyle{elsarticle-num}
+\bibdata{main}
+\bibcite{yu2017melanoma}{{1}{}{{}}{{}}}
+\bibcite{hosny2022refined}{{2}{}{{}}{{}}}
+\bibcite{wu2020skin}{{3}{}{{}}{{}}}
+\bibcite{pacheco2020impact}{{4}{}{{}}{{}}}
+\bibcite{khurshid2025multimodal}{{5}{}{{}}{{}}}
+\bibcite{li2020fusing}{{6}{}{{}}{{}}}
+\bibcite{pacheco2021attention}{{7}{}{{}}{{}}}
+\bibcite{khurshid2024optimizing}{{8}{}{{}}{{}}}
+\bibcite{watson2026multimodal}{{9}{}{{}}{{}}}
+\bibcite{zhu2026concept}{{10}{}{{}}{{}}}
+\bibcite{zeng2025mmskin}{{11}{}{{}}{{}}}
+\bibcite{sellergren2025medgemma}{{12}{}{{}}{{}}}
+\bibcite{tschandl2018ham10000}{{13}{}{{}}{{}}}
+\bibcite{pacheco2020padufes20}{{14}{}{{}}{{}}}
+\bibcite{esteva2017dermatologist}{{15}{}{{}}{{}}}
+\bibcite{codella2019skin}{{16}{}{{}}{{}}}
+\bibcite{simonyan2014very}{{17}{}{{}}{{}}}
+\bibcite{he2016deep}{{18}{}{{}}{{}}}
+\bibcite{huang2017densely}{{19}{}{{}}{{}}}
+\bibcite{tan2019efficientnet}{{20}{}{{}}{{}}}
+\bibcite{sandler2018mobilenetv2}{{21}{}{{}}{{}}}
+\bibcite{brinker2019deep}{{22}{}{{}}{{}}}
+\bibcite{radford2021learning}{{23}{}{{}}{{}}}
+\bibcite{wang2022medclip}{{24}{}{{}}{{}}}
+\bibcite{zhang2023biomedclip}{{25}{}{{}}{{}}}
+\bibcite{li2023llavamed}{{26}{}{{}}{{}}}
+\bibcite{yan2025derm1m}{{27}{}{{}}{{}}}
+\bibcite{yan2025multimodal}{{28}{}{{}}{{}}}
+\bibcite{hu2022lora}{{29}{}{{}}{{}}}
+\bibcite{woo2018cbam}{{30}{}{{}}{{}}}
+\bibcite{lin2017focal}{{31}{}{{}}{{}}}
+\bibcite{vo2026explainability}{{32}{}{{}}{{}}}
+\bibcite{ryan2025does}{{33}{}{{}}{{}}}
+\bibcite{el2026moving}{{34}{}{{}}{{}}}
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\gdef \@abspage@last{26}

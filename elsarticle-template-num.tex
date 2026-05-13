@@ -1,0 +1,446 @@
+%% 
+%% Copyright 2007-2024 Elsevier Ltd
+%% 
+%% This file is part of the 'Elsarticle Bundle'.
+%% ---------------------------------------------
+%% 
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.3 of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%% 
+%% The list of all files belonging to the 'Elsarticle Bundle' is
+%% given in the file `manifest.txt'.
+%% 
+%% Template article for Elsevier's document class `elsarticle'
+%% with numbered style bibliographic references
+%% SP 2008/03/01
+%% $Id: elsarticle-template-num.tex 249 2024-04-06 10:51:24Z rishi $
+%%
+
+\documentclass[preprint,12pt]{elsarticle}
+
+%\documentclass[preprint,12pt,twocolumn]{elsarticle}
+
+%% Use the option review to obtain double line spacing
+%% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
+
+%% Use the options 1p,twocolumn; 3p; 3p,twocolumn; 5p; or 5p,twocolumn
+%% for a journal layout:
+%% \documentclass[final,1p,times]{elsarticle}
+%% \documentclass[final,1p,times,twocolumn]{elsarticle}
+%% \documentclass[final,3p,times]{elsarticle}
+%% \documentclass[final,3p,times,twocolumn]{elsarticle}
+%% \documentclass[final,5p,times]{elsarticle}
+%% \documentclass[final,5p,times,twocolumn]{elsarticle}
+
+%% For including figures, graphicx.sty has been loaded in
+%% elsarticle.cls. If you prefer to use the old commands
+%% please give \usepackage{epsfig}
+
+%% The amssymb package provides various useful mathematical symbols
+\usepackage{amssymb}
+%% The amsmath package provides various useful equation environments.
+\usepackage{amsmath}
+%% Table packages used by the paper
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{diagbox}
+\usepackage{multirow}
+%% The amsthm package provides extended theorem environments
+%% \usepackage{amsthm}
+
+%% The lineno packages adds line numbers. Start line numbering with
+%% \begin{linenumbers}, end it with \end{linenumbers}. Or switch it on
+%% for the whole article with \linenumbers.
+%% \usepackage{lineno}
+\makeatletter
+\patchcmd{\emailauthor}{\ttfamily}{}{}{}
+\makeatother
+
+
+
+\journal{Biomedical Signal Processing and Control}
+
+\begin{document}
+
+\begin{frontmatter}
+
+%% Title, authors and addresses
+
+%% use the tnoteref command within \title for footnotes;
+%% use the tnotetext command for theassociated footnote;
+%% use the fnref command within \author or \affiliation for footnotes;
+%% use the fntext command for theassociated footnote;
+%% use the corref command within \author for corresponding author footnotes;
+%% use the cortext command for theassociated footnote;
+%% use the ead command for the email address,
+%% and the form \ead[url] for the home page:
+%% \title{Title\tnoteref{label1}}
+%% \tnotetext[label1]{}
+%% \author{Name\corref{cor1}\fnref{label2}}
+%% \ead{email address}
+%% \ead[url]{home page}
+%% \fntext[label2]{}
+%% \cortext[cor1]{}
+%% \affiliation{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+%% \fntext[label3]{}
+
+\title{CGVP-MedGemma: A Confidence-Gated Visual Prior Consistency Framework for Multimodal Skin Lesion Classification}
+
+%% use optional labels to link authors explicitly to addresses:
+%% \author[label1,label2]{}
+%% \affiliation[label1]{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+%%
+%% \affiliation[label2]{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+
+\author[label1]{Ruixi Zhang}
+\author[label1]{Chen Xiong\corref{cor1}}
+\ead{xiongch8@mail.sysu.edu.cn}
+\cortext[cor1]{Corresponding author}
+
+%% Author affiliation
+\affiliation[label1]{organization={Sun Yat-sen University},
+            addressline={School of Intelligent Systems Engineering},
+            city={Shenzhen},
+            postcode={518000}, 
+            country={China}}
+
+%% Abstract
+\begin{abstract}
+Skin lesion classification is important for early diagnosis and better patient prognosis. Existing deep learning methods generally rely on feature extraction from lesion images and incorporate patients’ clinical information to improve diagnostic performance. However, these methods still suffer from insufficient representation learning, modality bias, and unstable predictions in clinical scenarios. To address these issues, we propose CGVP-MedGemma, a confidence-gated visual prior consistency framework based on a medical vision-language model. The framework combines lesion images with clinical descriptions as input to MedGemma-4B-IT. The model is then fine-tuned with LoRA, a parameter-efficient strategy that enables effective adaptation of the large vision-language model to the skin lesion domain with limited training samples. Meanwhile, the model's output is restricted to a predefined diagnostic label set, which converts open-ended generation into a closed-set classification problem and mitigates label hallucination. To mitigate the model’s over-reliance on textual metadata and its neglect of visual evidence, we construct an independent visual prior branch and introduce a KL-divergence-based consistency regularization term, which encourages multimodal predictions to remain grounded in reliable visual evidence. The proposed method achieves an accuracy of 0.798 on PAD-UFES-20 and 0.784 on HAM10000\footnote{The code is available at https://github.com/zhangrx59/Graduation-Project.}, providing a feasible approach for applying medical vision-language models to skin tumor-assisted diagnosis.
+
+\end{abstract}
+
+%%Graphical abstract
+%\begin{graphicalabstract}
+%\includegraphics{grabs}
+%\end{graphicalabstract}
+
+%%Research highlights
+%\begin{highlights}
+%\item Research highlight 1
+%\item Research highlight 2
+%\end{highlights}
+
+%% Keywords
+\begin{keyword}
+Skin lesion classification, Medical vision-language model, Multimodal learning, Visual prior consistency, Parameter-efficient fine-tuning.
+\end{keyword}
+
+\end{frontmatter}
+
+%% Add \usepackage{lineno} before \begin{document} and uncomment 
+%% following line to enable line numbers
+%% \linenumbers
+
+%% main text
+%%
+
+%% Use \section commands to start a section
+\section{Introduction}
+
+
+Deep learning has significantly advanced skin lesion classification. Early studies mainly relied on convolutional neural networks (CNNs). To further improve diagnostic performance, subsequent studies incorporated residual connections, dense blocks, and attention mechanisms to improve feature extraction and classification performance\cite{yu2017melanoma,hosny2022refined,wu2020skin}. 
+
+Despite these advances, two critical challenges remain to be resolved. 
+First, conventional methods mainly focus on visual representation learning but underutilize text information. Studies have shown that dermoscopic images and patient metadata are complementary, proper multimodal fusion can improve diagnostic performance\cite{pacheco2020impact, khurshid2025multimodal}. But traditional architectures often rely on task-specific integrated structures and lack the advantages of knowledge transfer and evidence-based interpretability offered by medical vision-language models (MVLMs) through modeling images and text within a unified framework. Second, when applied to small-scale medical classification tasks, MVLMs face challenges such as 
+high training costs and output hallucinations\cite{zhu2026concept,zeng2025mmskin,sellergren2025medgemma}.
+
+
+To address these issues, recent studies have sought to optimize model accuracy through concept-adaptive fine-tuning or the creation of domain-specific datasets\cite{zhu2026concept,zeng2025mmskin}. However, existing methods still fall short in addressing class imbalance in clinical tasks and the shortcut-learning bias in multimodal fusion\cite{watson2026multimodal}. Models may rely too much on textual metadata while neglecting critical visual features, resulting in poor generalization in complex cases. Therefore, adapting generative MVLMs to closed-set classification tasks and mitigate modal bias while seamlessly integrating images with clinical information remains a key challenge.
+
+
+
+To this end, this paper proposes a framework for fine-tuning MedGemma-4B-IT\cite{sellergren2025medgemma} for closed-set classification of skin lesions. This framework aims to address the issues of output instability and modal bias in generative large language models when applied to specialized medical diagnosis. By combining expert-level visual priors with parameter-efficient fine-tuning techniques\cite{hu2022lora}, we have developed a diagnostic model that preserves clinical semantic understanding while accurately capturing local pathological features, thereby providing an efficient solution for small-scale, class-imbalanced dermatology datasets.
+
+
+The main contributions of this study are as follows:
+\begin{itemize}
+	
+	\item We propose a multimodal VLM adaptation framework for closed-set diagnosis. It converts structured clinical metadata into natural-language notes and constrains the output to a predefined label set, reformulating open-ended generation as closed-set softmax classification and eliminating label hallucination.
+	
+	
+	
+	\item We design a confidence-gated visual prior consistency mechanism that adopts an independent ResNet branch to provide auxiliary class distributions and applies KL-divergence regularization when the branch's prediction confidence exceeds a threshold, mitigating textual shortcut bias without incurring additional inference overhead.
+	
+	
+	\item We improve recognition of rare classes through a joint strategy of frequency class weighting and label smoothing. And we validated on  HAM10000 and PAD-UFES-20\cite{tschandl2018ham10000,pacheco2020padufes20}, demonstrate the effectiveness of the proposed framework.
+\end{itemize}
+
+
+\section{Related Works}
+
+\subsection{Skin lesion classification}
+\subsection{Metadata fusion in dermatology}
+\subsection{Medical vision-language models}
+\subsection{Class imbalance and shortcut learning
+}
+
+\section{Method}
+
+
+
+\subsection{Problem Formulation}
+
+In this study, we formulate skin lesion diagnosis as a multimodal classification task. For each sample, the input consists of a skin lesion image $x$ and its metadata $c$, where $c$ comprises 22 structured attributes including personal information, medical history, and lesion information. The output is a diagnostic label $y$ from a predefined label set $\mathcal{Y}$. Therefore, the task is to learn a mapping $f_{\theta}(x,c) \rightarrow y$, where $y \in \mathcal{Y}$ and $\theta$ denotes the model parameters. Accordingly, the model prediction is represented as the conditional probability distribution $p_{\theta}(y \mid x,c)$, and the final prediction is obtained by $\hat{y} = \arg\max p_{\theta}(y \mid x,c)$.
+
+
+Under this setting, the model jointly exploits lesion images and clinical metadata, where the former provide visual evidence and the latter offer complementary contextual cues. Our goal is to improve the discriminative ability and prediction stability of skin lesion classification in small-scale and class-imbalanced scenarios by jointly exploiting both modalities.
+
+
+\subsection{Multimodal VLM Adaptation}
+
+Rather than directly concatenating tabular feature vectors, we serialize all attributes in $c$ into a natural language clinical note, which is combined with $x$ under an instruction-following format as unified multimodal input.
+
+
+In this study, we adopt MedGemma-4B-IT, whose visual encoder is pretrained on large-scale medical imaging corpora, providing a strong initialization that is already sensitive to clinically relevant visual features. This choice substantially reduces the domain gap that fine-tuning must bridge, making adaptation more data-efficient.
+
+
+Given the limited scale of available datasets, full fine-tuning of a 4B model risks catastrophic forgetting. 
+Therefore, we adopt LoRA, which injects trainable low-rank decomposition matrices into the attention and MLP projections, representing each weight update as $\Delta \mathbf{W} = \mathbf{B}\mathbf{A}$, 
+where $\mathbf{A} \in \mathbb{R}^{r \times d}$, $\mathbf{B} \in \mathbb{R}^{d \times r}$, 
+and $r \ll d$. By constraining adaptation to a low dimensional subspace, LoRA preserves pretrained representations while directing the model's capacity toward task-specific discrimination.
+
+
+Because a VLM's output space includes the entire vocabulary, standard next-token prediction treats diagnosis as 
+a sequence generation problem rather than a $K$-way discrimination task. This not only introduces label hallucination 
+but also results in poorly calibrated probability estimates, since softmax normalization is performed over tens of thousands
+of irrelevant tokens. To 
+resolve this, we construct a closed-set classification head.  At the answer token position, we extracting only the logits corresponding to the $K$ label tokens and renormalize them within the label set:
+%
+\begin{equation}
+	p_\theta(y \mid x,c) 
+	= \frac{\exp(z_{y})}{\sum_{y' \in \mathcal{Y}} \exp(z_{y'})}
+	\label{eq:closed_softmax}
+\end{equation}
+%
+
+The classification objective is a label-smoothed weighted cross-entropy loss:
+%
+\begin{equation}
+	\mathcal{L}_{\mathrm{cls}} 
+	= -\sum_{k=1}^{K} w_k \cdot \tilde{y}_k \log p_\theta(y_k \mid x,c)
+	\label{eq:cls_loss}
+\end{equation}
+
+%
+where $w_k$ is normalized from the inverse square root of each class frequency to alleviate class imbalance, and $\tilde{y}_k$ denotes the smoothed soft label. To prevent the model from exploiting fixed label positions as a spurious shortcut, the enumeration order of label candidates in the prompt is randomly shuffled at each training iteration.
+
+\subsection{Prior-Guided Consistency Learning}
+
+While the previous section introduced an adaptation method for multimodal data fusion, a critical risk emerges in small-scale, class-imbalanced clinical scenarios: when clinical metadata is strongly correlated with a specific diagnosis, the model may preferentially rely on the metadata while underestimating the visual evidence in $x$.
+
+
+To alleviate this issue, we introduce an independent visual prior branch. This branch adopts a
+ResNet50 as the backbone and embeds a Convolutional Block Attention
+Module (CBAM) \cite{woo2018cbam} after the final residual stage. Channel attention and spatial attention mechanisms are applied to selectively enhance feature channels associated with lesion recognition patterns and effectively guide the model's receptive field toward lesion regions. The visual prior branch is trained with class-balanced Focal Loss\cite{lin2017focal} combined with a weighted random sampler to handle long-tailed class distributions. After training, its parameters remain frozen during the LoRA fine-tuning of the main model. Crucially, this branch takes only $x$ as input and has no access to $c$, ensuring that its output distribution constitutes a pure visual diagnostic reference, structurally decoupled from any form of textual sho
+rtcut.
+
+
+During LoRA fine-tuning, the frozen visual prior branch performs a forward pass on each training image to produce a purely visual reference distribution $p_r(y\mid x)$. This distribution serves solely as a consistency target within the loss function and is never injected into the prompt. We apply a KL divergence regularization term to penalize excessive deviation of the main model's output from this visual reference, ensuring that multimodal predictions remain grounded in visual evidence even when textual cues are strongly predictive. Specifically, we define the set of high-confidence samples as: \begin{equation}
+	\mathcal{G} = \{\, i \mid \max_{y \in \mathcal{Y}} p_r(y \mid x_i, c_i) > \tau \,\},
+	\label{eq:gated_set}
+\end{equation}
+%
+where $\tau$ is a confidence threshold. The consistency loss is then computed as:
+
+\begin{equation}
+	\mathcal{L}_{\mathrm{KL}} =
+	\frac{1}{|\mathcal{G}| + \epsilon}
+	\sum_{i \in \mathcal{G}}
+	D_{KL}\!\left(
+	p_{\theta}(y \mid x_i, c_i)\,\|\,p_r(y \mid x_i, c_i)
+	\right),
+	\label{eq:kl_gated}
+\end{equation}
+where $\epsilon$ is a constant for numerical stability, $D_{KL}$ measures the discrepancy between the output distribution of the main model and the reference distribution produced by the auxiliary prior branch. In this way, the main model is encouraged to preserve multimodal discrimination ability while avoiding excessive deviation from reliable prior evidence. The overall training objective is defined as:
+%
+\begin{equation}
+	\mathcal{L} = \mathcal{L}_{\mathrm{cls}} + \lambda\, \mathcal{L}_{\mathrm{KL}}
+	\label{eq:total_loss}
+\end{equation}
+%
+where $\mathcal{L}_{\mathrm{cls}}$ denotes the main classification loss 
+and $\lambda$ controls the strength of consistency regularization. 
+Since the auxiliary prior branch is used only during training, the proposed
+mechanism introduces no additional inference time overhead.
+
+
+\begin{figure*}[!h]
+	\centering
+	\includegraphics[width=1.0\linewidth]{screenshot001}
+	\caption{Technological route.}
+	\label{fig:screenshot001}
+\end{figure*}
+
+\subsection{Training Strategy}
+
+%Our experiment is conducted on NVIDIA RTX 4090 24GB GPU with the public PAD-UFES-20 dataset for training and validation. The dataset is split at the patient level to prevent data leakage. To evaluate generalization performance, we additionally adopt the ISIC 2019 dataset as an external test set.
+
+The visual prior branch adopts an ImageNet-pretrained ResNet50 with an input resolution of $320 \times 320$. To mitigate class imbalance, we employ weighted random sampling and Focal Loss ($\gamma$ = 1.5), optimizing the model with AdamW and a ReduceLROnPlateau scheduler. This branch is trained for $30$ epochs, and then its parameters are frozen for subsequent fine-tuning.
+
+For the main model, we apply LoRA fine-tuning using bfloat16 precision (rank = 32, $\alpha$ = 64, dropout = 0.05). Training lasts for 15 epochs with a global batch size of 4. We adopt a cosine learning rate schedule with warmup (initial $5\times10^{-5}$, warmup ratio 0.1) and set the gradient clipping threshold to 0.5. The loss is computed only at the answer token positions. The regularization weight $\lambda$ and the confidence gate threshold $\tau$ are set to 0.05 and 0.85, respectively, which are determined through ablation studies on the validation set.
+
+
+%For optimization, the model is trained for 5 epochs, with both the per-device training batch size and evaluation batch size set to 1. Gradient accumulation over 8 steps is adopted to increase the effective batch size. The initial learning rate is set to \(5\times10^{-5}\), the learning rate scheduler follows a cosine schedule, the warmup ratio is set to 0.1, and the maximum gradient norm is set to 0.5. To make the generative model more stable for closed-set classification, the supervision loss is computed only on the label token at the answer position, while the prompt tokens and padding tokens are excluded from loss calculation. In addition, the label order in the prompt is randomly shuffled during training to reduce potential positional bias. The main classification objective is a cross-entropy loss with class weights and label smoothing. The class weights are constructed from the inverse square root of class frequencies in the training set and are further normalized to alleviate class imbalance. When consistency learning is enabled, a KL-divergence-based regularization term is added to the main classification loss, with its weight set to 0.05. This consistency constraint is activated only when the maximum class probability from the auxiliary visual prior branch exceeds 0.85, so as to avoid the negative effect of low-confidence priors.
+
+\section{Experiments}
+
+\subsection{Datasets and Experimental Setup}
+
+
+Our experiments are conducted on two public skin lesion datasets, PAD-UFES-20 and HAM10000 \cite{tschandl2018ham10000,pacheco2020padufes20}. PAD-UFES-20 contains smartphone-captured clinical images and structured patient metadata across six skin lesion classes: actinic keratosis (ACK), basal cell carcinoma (BCC), melanoma (MEL), melanocytic nevus (NEV), squamous cell carcinoma (SCC), and seborrheic keratosis (SEK). HAM10000 consists of 10015 dermoscopic images covering seven diagnostic categories. To prevent data leakage, we split PAD-UFES-20 at the \textbf{patient level} into training (70\%), validation (15\%), and test (15\%) sets. To preserve the original clinical records, we perform \textbf{no imputation or removal} for missing data, nor did we employ neural networks for missing value prediction, as such artificial imputation would introduce potential bias\cite{vo2026explainability,ryan2025does,el2026moving}. For cross-dataset evaluation, HAM10000 is used only on the shared label space with PAD-UFES-20 after category mapping, and non-overlapping categories are excluded from external evaluation.
+
+
+To evaluate the model performance, we employ Accuracy (ACC), Recall, and Balanced accuracy (BACC). Let $M$ denote the number of classes, $N$ the total number of samples. For the $i$-th sample, let $\hat{y}_i$ and $y_i$ be the predicted label and the ground-truth label. The metrics are defined as follows:
+
+
+\begin{equation}
+	\begin{gathered}
+		\text{Accuracy} = \frac{1}{N} \sum_{i=1}^{N} \mathbf{1}(\hat{y}_i = y_i) \\
+		\text{Recall}_j = \frac{TP_j}{TP_j + FN_j} \\
+		\text{Balanced Accuracy} = \frac{1}{M} \sum_{j=1}^{M} \text{Recall}_j
+	\end{gathered}
+\end{equation}
+where $TP_j$ and $FN_j$ denote the true positives and false negatives for class $j$, respectively. Our baselines consist of three groups: \textbf{image-only}\cite{simonyan2014very,he2016deep,tan2019efficientnet,sandler2018mobilenetv2,huang2017densely}, \textbf{multimodal fusion}\cite{pacheco2020impact,khurshid2025multimodal,li2020fusing,pacheco2021attention,khurshid2024optimizing}, and \textbf{open-source VLMs}\cite{yan2025multimodal}.
+
+\begin{table*}[!htbp]
+	\centering
+	\renewcommand{\arraystretch}{1.15}  % 增加行距
+	\caption{Performance comparison of five backbones combined with six metadata fusion methods on PAD-UFES-20.}
+	\setlength{\tabcolsep}{4pt}
+	\small
+	\resizebox{\textwidth}{!}{%
+	\begin{tabular}{l|cc|cc|cc|cc|cc}
+		\hline
+		\multirow{2}{*}{\diagbox[width=9em,height=2\baselineskip]{\textbf{Method}}{\textbf{Model}}} & \multicolumn{2}{c|}{\textbf{VGG13\cite{simonyan2014very}}} & \multicolumn{2}{c|}{\textbf{ResNet50\cite{he2016deep}}} & \multicolumn{2}{c|}{\textbf{EfficientNet-B4\cite{tan2019efficientnet}}} & \multicolumn{2}{c|}{\textbf{MobileNet-V2\cite{sandler2018mobilenetv2}}} & \multicolumn{2}{c}{\textbf{DenseNet-121\cite{huang2017densely}}} \\
+		\cline{2-11}
+		& \textbf{ACC} & \textbf{BACC} & \textbf{ACC} & \textbf{BACC} & \textbf{ACC} & \textbf{BACC} & \textbf{ACC} & \textbf{BACC} & \textbf{ACC} & \textbf{BACC} \\
+		\hline
+		\textbf{Image-only} & 0.662 & 0.628 & \textbf{0.708} & \textbf{0.657} & 0.678 & 0.643 & 0.669 & 0.649 & 0.680 & 0.665 \\
+		\hline
+		\textbf{Concat\cite{pacheco2020impact}} & 0.701 & 0.713 & 0.732 & \textbf{0.725} & \textbf{0.735} & 0.708 & 0.712 & 0.717 & 0.722 & 0.720 \\
+		\textbf{MetaNet\cite{li2020fusing}} & 0.726 & 0.719 & 0.721 & 0.707 & \textbf{0.729} & 0.705 & 0.708 & 0.703 & 0.724 & \textbf{0.727} \\
+		\textbf{MetaBlock\cite{pacheco2021attention}} & 0.728 & 0.736 & \textbf{0.735} & 0.738 & 0.748 & 0.770 & 0.724 & 0.731 & 0.723 & \textbf{0.746} \\
+		\textbf{AuxNet\cite{khurshid2024optimizing}} & 0.751 & 0.748 & \textbf{0.757} & \textbf{0.749} & 0.743 & 0.728 & 0.736 & 0.711 & 0.748 & 0.739 \\
+		\textbf{DualRefNet\cite{khurshid2025multimodal}} & 0.753 & 0.745 & \textbf{0.759} & 0.748 & 0.751 & 0.738 & 0.746 & 0.724 & 0.756 & \textbf{0.749} \\
+		\hline
+	\end{tabular}%
+	}
+	\label{tab:fusion_matrix}
+\end{table*}
+
+\subsection{Visual Prior Configuration}
+
+
+To determine the optimal visual prior branch and compare with fine-tuned VLMs, we evaluated both image-only and multimodal fusion methods on PAD-UFES-20. The results are presented in \textbf{Table~\ref{tab:fusion_matrix}}. Under the image-only setting, class imbalance significantly affected the performance of all networks, creating a notable gap between ACC and BACC. After incorporating metadata fusion, all networks achieved performance improvements. However, the visual prior branch in our framework serves as an auxiliary reference based on images. Since ResNet50 achieved the best overall performance under image-only setting, we adopt it as the backbone and further enhance it with CBAM to provide a reliable visual reference distribution for the subsequent LoRA fine-tuning stage.
+
+
+\subsection{Comparison With Other Models}
+We review recent studies and present the performance of representative VLMs on HAM10000 and PAD-UFES-20 in Table~\ref{tab:vlm_ham_pad_compare}.
+
+\begin{table}[!htbp]
+	\centering
+	\renewcommand{\arraystretch}{1.15}
+	\caption{Performance comparison of representative VLMs on HAM10000 and PAD-UFES-20.}
+	\begin{tabular}{>{\raggedright\arraybackslash}p{11em}|c c|c c}
+		\hline
+		\multirow{2}{*}{\diagbox[innerwidth=11em,height=2\baselineskip]{\textbf{Methods}}{\textbf{Dataset}}}
+		& \multicolumn{2}{c|}{\textbf{HAM10000}} 
+		& \multicolumn{2}{c}{\textbf{PAD-UFES-20}} \\
+		\cline{2-5}
+		& \textbf{ACC} & \textbf{Recall} & \textbf{ACC} & \textbf{Recall} \\
+		\hline
+		\textbf{LLaVA-Med-7B\cite{li2023llavamed}} & 0.784 & 0.621 & 0.735 & 0.624 \\
+		\textbf{SkinVL-PubMM\cite{zeng2025mmskin}} & 0.790 & 0.623 & 0.752 & 0.640 \\
+		\textbf{DermLIP\cite{yan2025derm1m}} & \textbf{0.881} & -- & 0.740 & -- \\
+		\textbf{Ours} & 0.784 & \textbf{0.656} & \textbf{0.798} & \textbf{0.776}\\
+		\hline
+		\multicolumn{5}{l}{\footnotesize Note: `--' indicates the result is not reported in the original paper.} \\
+	\end{tabular}
+	\label{tab:vlm_ham_pad_compare}
+\end{table}
+
+Our method shows strong performance on PAD-UFES-20 and remains competitive on HAM10000 compared with recent representative VLM baselines. These results suggest that the proposed framework remains competitive with conventional metadata fusion methods, while maintaining solid performance on the established HAM10000 benchmark.
+
+\subsection{Ablation Studies}
+We conduct an incremental ablation study on PAD-UFES-20 to quantify the contribution of each component in the proposed training strategy.
+
+\begin{table}[!htbp]
+	\centering
+	\caption{Step-wise ablation of the training strategy on PAD-UFES-20.}
+	\label{tab:ablation}
+	\setlength{\tabcolsep}{15pt}
+	\begin{tabular}{lcc}
+		\toprule
+		\textbf{Training Strategy} & \textbf{ACC} & \textbf{BACC} \\
+		\midrule
+		MedGemma-4B-IT      & 0.551  & 0.476  \\
+		\quad + LoRA fine-tuning           & 0.630  & 0.608  \\
+		\quad + Weighted CE loss           & 0.645  & 0.617  \\
+		\quad + Visual prior branch        & 0.751  & 0.738  \\
+		\quad \textbf{+ Confidence-gated KL} & \textbf{0.798} & \textbf{0.776} \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+As shown in \textbf{Table~\ref{tab:ablation}}, the MedGemma-4B-IT baseline performs poorly, highlighting the challenge of applying generative VLMs directly to skin lesion diagnosis. LoRA fine-tuning substantially improves performance, demonstrating that lightweight domain adaptation aligns the pretrained model with the dermatology classification task. Adding weighted cross-entropy loss yields a smaller but consistent improvement, confirming that addressing class imbalance benefits the model, especially for underrepresented categories. A substantial gain is observed after incorporating the frozen visual prior branch, indicating that it breaks the model's over-reliance on metadata, stabilizing optimization and improving class-level balance. Finally, confidence-gated KL regularization further improves both ACC and BACC, achieving the best overall performance. This confirms that selective regularization on high-confidence prior predictions is most effective, reducing the risk of enforcing unreliable guidance on visually ambiguous samples.
+
+Based on the final model, we quantified the contribution of clinical metadata by evaluating classification performance under different configurations. Metadata A contains \textbf{basic patient and symptom information}, while Metadata B extends Metadata A by \textbf{adding lesion morphological information}. As shown in \textbf{Table~\ref{tab:metadata}}, richer metadata improves classification performance, confirming that clinical attributes provide useful complementary information for accurate diagnosis.
+
+
+
+\begin{table}[!htbp]
+	\centering
+	\caption{Performance of different metadata on PAD-UFES-20.}
+	\label{tab:metadata}
+	\setlength{\tabcolsep}{15pt}
+	\begin{tabular}{lcc}
+		\toprule
+		\textbf{Metadata Variant} & \textbf{ACC} & \textbf{BACC} \\
+		\midrule
+		Metadata A           & 0.710  & 0.698  \\
+		Metadata B        & 0.752  & 0.747  \\
+		\textbf{Full Metadata}             & \textbf{0.798} & \textbf{0.776 } \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+
+\section{Conclusion}
+
+In this paper, we proposed a multimodal fine-tuning framework for closed-set skin lesion diagnosis based on MedGemma-4B-IT. We convert structured metadata into natural-language notes with constrained output to a predefined label set, eliminating label hallucination. We further introduce a confidence-gated visual prior consistency mechanism in which a frozen ResNet50+CBAM branch regularizes predictions via KL divergence, mitigating textual shortcut bias without inference overhead. Experiments on PAD-UFES-20 show that each component contributes incrementally. Our framework achieves competitive results compared to representative VLMs and multimodal baselines. Beyond performance, our framework leverages VLMs' generative nature to provide diagnostic reasoning, promoting trustworthy AI and evidence-based dermatology.
+
+\section*{Data availability}
+
+The data used in this study are publicly available from the original sources cited in this article. PAD-UFES-20 and HAM10000 can be accessed through the resources described by Pacheco et al. \cite{pacheco2020padufes20} and Tschandl et al. \cite{tschandl2018ham10000}. No new dataset was generated for this study.
+
+\section*{Declaration of competing interest}
+
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+\section*{Acknowledgements}
+
+The authors thank the maintainers of the PAD-UFES-20 and HAM10000 datasets for making these resources publicly available.
+
+\bibliographystyle{elsarticle-num}
+\bibliography{elsarticle-template-num}
+\end{document}

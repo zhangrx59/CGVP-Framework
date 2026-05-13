@@ -1,0 +1,2746 @@
+diagbox Package (v2.3)
+
+⇒ 中文版
+
+Making Table Heads with Diagonal Lines
+Leo Liu
+leoliu.pku@gmail.com
+2020/02/09
+
+1 Introduction
+diagbox is a replacement of old slashbox package1 . I write this package simply
+because that slashbox is not available in TEX Live for licening problems. slashbox has
+no explicit license information available, but diagbox is under LPPL.
+diagbox is a modern alternative of slashbox. I changed the user interface to use a
+key-value syntax, get rid of some restrictions of slashbox, use pict2e to draw diagonal
+lines. Especially, this package also provides ability to make a box with two diagonal
+lines in it. All these can be obtained by a \diagbox command.
+As a replacement of slashbox, diagbox package also provides compatible macros of
+slashbox, but the result is a little different.
+To use diagbox, ε-TEX is needed. And diagbox requires pict2e, keyval, calc, and fp
+packages.
+
+2 Usage
+2.1 Basic usage
+To load the package, just put this in the preamble:
+\usepackage{diagbox}
+\diagbox is the main command. It can take two arguments, to produce a box with
+
+\diagbox
+
+a diagonal line from north west to south east.
+For example:
+1
+
+By Koichi Yasuoka and Toru Sato. Available on CTAN://macros/latex/contrib/slashbox/slashbox.sty
+
+1
+
+Day
+Time
+Morning
+
+Mon
+
+Tue
+
+used
+
+Wed
+
+used
+
+Afternoon
+
+used
+
+used
+
+1
+
+\begin{tabular}{|l|ccc|}
+
+2
+
+\hline
+
+3
+
+\diagbox{Time}{Day} & Mon & Tue & Wed \\
+
+4
+
+\hline
+
+5
+
+Morning
+
+6
+
+Afternoon &
+
+7
+
+\hline
+
+8
+
+\end{tabular}
+
+& used & used &
+
+\\
+
+& used & used \\
+
+\diagbox can also take three arguments, to draw a table head with two diagonal
+lines. For example,
+1
+
+\begin{tabular}{|l|ccc|}
+
+2
+
+\hline
+
+3
+
+\diagbox{Time}{Room}{Day} & Mon & Tue & Wed \\
+
+4
+
+\hline
+
+5
+
+Morning
+
+6
+
+Afternoon &
+
+7
+
+\hline
+
+8
+
+\end{tabular}
+Room
+
+& used & used &
+
+\\
+
+& used & used \\
+
+Day
+Mon
+
+Tue
+
+used
+
+used
+
+Wed
+
+Time
+Morning
+Afternoon
+
+used
+
+used
+
+2.2 More options
+\diagbox can take a key-value list as an optional argument to specify the width
+and height of the box, the direction of the diagonal line, and the trimming margins:
+width Specify the width of the box explicitly. If it is omitted, diagbox will calculate
+the width automatically.
+height Specify the height of the box explicitly. If it is omitted, diagbox will calculate
+the height automatically. In the argument, one can use \line as a line height.
+dir Specify the direction of the diagonal line. The value can be NW, NE, SW and SE.
+Default value is NW. The meaning of the values see below.
+• \diagbox[dir=⟨direction⟩]{A}{B} in a table looks:
+B
+A
+NW or SE：
+SW or NE：
+A
+B
+2
+
+• \diagbox[dir=⟨direction⟩]{A}{M}{B} in a table looks:
+A M
+A
+M B
+NW
+NE
+SW
+SE
+A
+B
+M B
+
+B
+A M
+
+innerwidth Specify the width of the inner content box. innerwidth option is useful
+when specifying column width. For example:
+\begin{tabular}{|p{2cm}|} \hline
+\diagbox[innerwidth=2cm]{A}{B} \\ \hline
+\end{tabular}
+B
+A
+innerleftsep, innerrightsep Specify the distances between the border of the inner
+content box and the border of the diagonal box. We have:
+innerleftsep + innerwidth + innerrightsep = width.
+For example:
+\begin{tabular}{|c|} \hline
+\diagbox[innerleftsep=.5cm,innerrightsep=0pt]{A}{B} \\ \hline
+\end{tabular}
+B
+A
+outerleftsep, outerrightsep Specify the distances between the border of the diagonal
+box and the border of the tabular cell. Usually they are negative values, which
+satisfy
+outerleftsep + LEFTtabcolsep = 0 pt,
+outerrightsep + RIGHTtabcolsep = 0 pt.
+where LEFTtabcolsep and RIGHTtabcolsep are the distances between verticle
+lines and the tabular cell content (the diagonal box). For example:
+\begin{tabular}{|r@{\hspace{20pt}}|l|} \hline
+\diagbox[outerrightsep=-20pt]{A}{B} & C \\ \hline
+AABB & CC \\ \hline
+\end{tabular}
+B
+A
+AABB
+
+C
+CC
+3
+
+leftsep, rightsep Specify the left and right distances, which are equivalent to:
+innerleftsep := leftsep,
+
+innerrightsep := rightsep,
+
+outerleftsep := −leftsep,
+
+outerrightsep := −rightsep.
+
+trim Specify the margin to be trimmed. The value can be l, r, and lr, rl. This helps
+the slash line exceeds the boundary when @{} column specifier is used.
+Note: trim=l has the same effect as leftsep=0pt, and trim=r has the same effect
+as rightsep=0pt.
+font Specify the font of the cell.
+Italic
+
+\diagbox[font=\footnotesize\itshape]{Small}{Italic}
+Small
+
+linewidth Specify the line width of the diagonal lines.
+linecolor Specify the line color of the diagonal lines. (color or xcolor is needed.)
+\diagbox[linewidth=2pt,linecolor=blue]{AAA}{BBB}
+
+BBB
+AAA
+
+Here is a more complex example to show the usage of the options:
+1
+
+\begin{tabular}{|@{}l|c|c|r@{}|}
+
+2
+
+\hline
+
+3
+
+\diagbox[width=5em,trim=l]{Time}{Day} & Mon & Tue & Wed\\
+
+4
+
+\hline
+
+5
+
+Morning
+
+6
+
+\hline
+
+7
+
+Afternoon &
+
+8
+
+\hline
+
+9
+
+\end{tabular}
+Day
+Time
+Morning
+Afternoon
+
+& used & used & used\\
+& used & \diagbox[dir=SW,height=2em,trim=r]{A}{B} \\
+
+Mon
+
+Tue
+
+Wed
+
+used
+
+used
+
+used
+
+used
+
+A
+
+B
+
+What’s more, you can use \\ to break lines in \diagbox. Manual setting of the
+height of the head may be needed. For example,
+1
+
+\begin{tabular}{|c|}
+
+2
+
+\hline
+
+3
+
+\diagbox[height=3\line]{line\\heads}{column\\heads} \\
+4
+
+4
+
+\hline
+
+5
+
+\end{tabular}
+column
+heads
+
+line
+heads
+
+2.3 Compatibility with slashbox
+diagbox package emulates slashbox and also prevents slashbox to be loaded.
+diagbox package provides \slashbox and \backslashbox which syntax similar to
+slashbox package. However, the results of the two packages are a little different. These
+two commands are for compatibility only, it is better to use \diagbox instead for new
+documents.
+\backslashbox
+
+\backslashbox works as \diagbox, but it takes two optional arguments to specify
+the width and trim options.
+
+\slashbox
+
+\slashbox works as \diagbox[dir=SW], and takes two optional arguments to specify the width and trim options.
+For example,
+alpha
+
+A
+
+num
+
+B
+
+1
+
+\begin{tabular}{|c|c|c|} \hline
+
+2
+
+\backslashbox[2cm]{num}{alpha}
+
+3
+
+& A
+
+& B
+
+\\\hline
+
+1
+
+A1
+
+B1
+
+4
+
+1 & A1 & B1 \\\hline
+
+2
+
+A2
+
+B2
+
+5
+
+2 & A2 & B2 \\\hline
+
+6
+
+\end{tabular}
+
+3 Known issues and TODO
+Known issues:
+• The result of \slashbox and \backslashbox is different with slashbox package.
+The algorithms to calculate the width and height are different; and the results of
+the second optional argument of \slashbox (i.e. trim key in \diagbox) in the
+two packages are differernt.
+This is not a bug. Usually the width calculated by diagbox is more safe than
+slashbox.
+• For a triple box (a table head with two diagonal lines), the first argument must
+not be too wide and the third argument must not be too high. Otherwise, the
+layout algorithm cannot calculate the proper width and height of the table head,
+and a warning will be issued. (Thanks to Frank Mittelbach.)
+
+5
+
+• The cell with \diagbox should be the widest one of the column. Otherwise the
+slash line cannot exceeds the boundary. For example,
+B
+A
+Very long term
+
+\begin{tabular}{|c|}
+
+1
+
+\hline
+
+2
+
+\diagbox{A}{B}
+
+\\\hline
+
+3
+
+Very long term
+
+\\\hline
+
+\end{tabular}
+
+4
+
+This can be solved by setting a wider width option of \diagbox manually.
+
+6
+
+diagbox 宏包（v2.3）
+
+⇒ English Version
+
+制做斜线表头
+刘海洋
+leoliu.pku@gmail.com
+2020/02/09
+
+简介
+
+4
+
+diagbox 设计用来代替旧的 slashbox 宏包1 。编写这个宏包的缘起是 slashbox 因为
+缺少明确的自由许可信息，被 TEX Live 排除。这个宏包是在 LPPL 协议下发行的。
+diagbox 是 slashbox 宏包的一个现代的版本。它采用了新的 key-value 式语法参数，
+去除了 slashbox 原有的一些长度限制，并调用 pict2e 宏包画斜线；特别还添加了绘制两
+条斜线的表头的新功能。
+作为 slashbox 的代替，diagbox 除了提供自己的新命令，也提供了 slashbox 原有的
+两个命令，语法不变，编译结果略有区别。
+diagbox 依赖 ε-TEX 扩展（这在目前总是可用的），依赖 pict2e、keyval、calc 和 fp
+宏包。
+
+5
+
+用法说明
+
+5.1
+
+基本用法
+要使用本宏包，首先在导言区调用：
+
+\usepackage{diagbox}
+\diagbox 是宏包提供的主要命令。它可以带有两个必选参数，表示要生成斜线表
+
+\diagbox
+
+头的两部分内容。默认斜线是从西北到东南方向的。
+例如：
+1
+
+作者 Koichi Yasuoka（安岡孝一）与 Sato Toru（佐藤徹）。宏包见 CTAN://macros/latex/contrib/slashbox/
+
+slashbox.sty。
+
+7
+
+Day
+Time
+Morning
+
+Mon
+used
+
+Afternoon
+
+Tue
+
+Wed
+
+used
+used
+
+used
+
+1
+
+\begin{tabular}{|l|ccc|}
+
+2
+
+\hline
+
+3
+
+\diagbox{Time}{Day} & Mon & Tue & Wed \\
+
+4
+
+\hline
+
+5
+
+Morning
+
+6
+
+Afternoon &
+
+7
+
+\hline
+
+8
+
+\end{tabular}
+
+& used & used &
+
+\\
+
+& used & used \\
+
+\diagbox 也可以接受三个参数，这样就会生成带有两条斜线的表头，例如：
+1
+
+\begin{tabular}{|l|ccc|}
+
+2
+
+\hline
+
+3
+
+\diagbox{Time}{Room}{Day} & Mon & Tue & Wed \\
+
+4
+
+\hline
+
+5
+
+Morning
+
+6
+
+Afternoon &
+
+7
+
+\hline
+
+8
+
+\end{tabular}
+Room
+
+& used & used &
+
+\\
+
+& used & used \\
+
+Day
+Mon
+
+Tue
+
+used
+
+used
+
+Wed
+
+Time
+Morning
+Afternoon
+
+5.2
+
+used
+
+used
+
+更多参数设置
+\diagbox 还可以在前面带一个可选参数，里面用 key-value 的语法设置宽度、方向
+
+等更多的选项：
+width 明确指定盒子的总宽度。如果省略，则会自动计算能够放下所有内容的宽度。
+height 明确指定盒子的总高度。
+dir 指定斜线方向。可以取 NW（西北）
+、NE（东北）
+、SW（西南）
+、SE（东南）四种方向。
+在只有一条斜线的表头中，NE 与 SW、SE 与 NW 是等价的。斜线方向的默认值是
+NW。
+\diagbox[dir=⟨方向⟩]{A}{B} 在表格中的效果：
+B
+A
+NW 或 SE：
+SW 或 NE：
+A
+B
+
+8
+
+\diagbox[dir=⟨方向⟩]{A}{M}{B} 在表格中的效果：
+A M
+A
+M B
+NW
+NE
+SW
+SE
+A
+B
+M B
+
+B
+A M
+
+innerwidth 设置盒子中内容的宽度。innerwidth 选项可以与表格的列宽度一起设置
+并保持一致。如：
+\begin{tabular}{|p{2cm}|} \hline
+\diagbox[innerwidth=2cm]{A}{B} \\ \hline
+\end{tabular}
+B
+A
+innerleftsep, innerrightsep 设置内间距，即内容盒子与斜线盒子边界之间的距离。我
+们有关系式：
+innerleftsep + innerwidth + innerrightsep = width.
+例如：
+\begin{tabular}{|c|} \hline
+\diagbox[innerleftsep=.5cm,innerrightsep=0pt]{A}{B} \\ \hline
+\end{tabular}
+B
+A
+outerleftsep, outerrightsep 设置外间距，即斜线盒子边界到表格单元格边界的距离。
+由于斜线是沿单元格画出而非斜线盒子本身画出，斜线通常会伸出斜线盒子之外，
+此距离为负数，并满足如下关系式：
+outerleftsep + LEFTtabcolsep = 0 pt,
+outerrightsep + RIGHTtabcolsep = 0 pt.
+其中 LEFTtabcolsep 与 RIGHTtabcolsep 是表格竖线与表格内容（斜线例子边界）
+之间的距离。例如：
+\begin{tabular}{|r@{\hspace{20pt}}|l|} \hline
+\diagbox[outerrightsep=-20pt]{A}{B} & C \\ \hline
+AABB & CC \\ \hline
+\end{tabular}
+B
+A
+AABB
+
+C
+CC
+9
+
+leftsep, rightsep 同时设置左右内外间距，满足关系式：
+innerleftsep := leftsep,
+
+innerrightsep := rightsep,
+
+outerleftsep := −leftsep,
+
+outerrightsep := −rightsep.
+
+trim 设置左边界或右边界不计算额外的空白，可以取值为 l, r, lr 或 rl。这个选项在
+列格式包含 @{} 时将会有用。
+注：trim=l 与 leftsep=0pt 效果相同，而 trim=r 与 rightsep=0pt 效果相同。
+font 设置单元格字体。
+Italic
+
+\diagbox[font=\footnotesize\itshape]{Small}{Italic}
+Small
+
+linewidth 设置斜线宽度。
+linecolor 设置斜线颜色。（需要自行载入 color 或 xcolor 宏包。）
+\diagbox[linewidth=2pt,linecolor=blue]{AAA}{BBB}
+
+BBB
+AAA
+
+一个更复杂的例子：
+1
+
+\begin{tabular}{|@{}l|c|c|r@{}|}
+
+2
+
+\hline
+
+3
+
+\diagbox[width=5em,trim=l]{Time}{Day} & Mon & Tue & Wed\\
+
+4
+
+\hline
+
+5
+
+Morning
+
+6
+
+\hline
+
+7
+
+Afternoon &
+
+8
+
+\hline
+
+9
+
+\end{tabular}
+Day
+Time
+Morning
+
+& used & used & used\\
+& used & \diagbox[dir=SW,height=2em,trim=r]{A}{B} \\
+
+Mon
+
+Tue
+
+Wed
+
+used
+
+used
+
+used
+
+used
+
+A
+
+Afternoon
+
+B
+
+此外，\diagbox 的表头内容还可以用 \\ 手工换行。此时通常需要对自动计算的表
+头高度进行手工调整。例如：
+1
+
+\begin{tabular}{|c|}
+
+2
+
+\hline
+
+3
+
+\diagbox[height=3\line]{line\\heads}{column\\heads} \\
+
+4
+
+\hline
+
+5
+
+\end{tabular}
+
+10
+
+column
+heads
+
+line
+heads
+
+对 slashbox 宏包的兼容性
+
+5.3
+
+在使用 diagbox 宏包时，会模拟 slashbox 宏包的功能，并禁止 slashbox 再被调用。
+diagbox 宏包提供了与 slashbox 大致相同的 \slashbox 与 \backslashbox 两个命
+令。\slashbox 与 \backslashbox 的语法来自 slashbox 宏包，排版效果略有区别。这
+两个命令仅在旧文档中作为兼容命令使用。实际中使用 \diagbox 更为方便。
+\backslashbox 基本功能与 \diagbox 类似。它带有两个可选参数，分别表示
+
+\backslashbox
+
+\diagbox 中的 width 与 trim 选项。
+\slashbox 基本功能与 \diagbox[dir=SW] 类似。它也带有两个可选参数，表示
+
+\slashbox
+
+\diagbox 中的 width 和 tirm 选项。
+例如：
+alpha
+
+A
+
+num
+
+6
+
+B
+
+1
+
+\begin{tabular}{|c|c|c|} \hline
+
+2
+
+\backslashbox[2cm]{num}{alpha}
+& A
+
+3
+
+& B
+
+\\\hline
+
+1
+
+A1
+
+B1
+
+4
+
+1 & A1 & B1 \\\hline
+
+2
+
+A2
+
+B2
+
+5
+
+2 & A2 & B2 \\\hline
+
+6
+
+\end{tabular}
+
+已知问题和未来版本
+已知问题：
+• \slashbox 与 \backslashbox 命令的效果与在 slashbox 宏包中不同。两个宏包在
+计算盒子宽度和高度时，使用了不同的算法；同时，在处理 \slashbox 第二个可
+选参数（即 \diagbox 的 trim 键）时，使用的方式也不一样。
+这不是 bug。通常 diagbox 计算出的宽度比 slashbox 的结果更安全一些。
+• 有两条斜线的三部分表头，其所采用的自动布局算法是受限的。特别是，最左的部
+分不能过宽，最右的部分不能过高，否则将无法计算出合理的结果，宏包会发出警
+告。（感谢 Frank Mittelbach 指出该问题。）
+• \diagbox 生成的单元格必须是表列中最宽的一个。如果不能达到最宽，则画出的
+斜线不能保证在正确的位置。例如：
+B
+A
+Very long term
+
+1
+
+\begin{tabular}{|c|}
+
+\hline
+
+2
+
+\diagbox{A}{B}
+
+\\\hline
+
+3
+
+Very long term
+
+\\\hline
+
+4
+
+\end{tabular}
+
+11
+
+此时可以手工设置较宽的 \diagbox 的 width 选项，解决此问题。
+
+12
+
+7 Implementation / 代码实现
+7.1
+
+实现依赖的工具包
+使用 key-value 界面。
+
+1 \RequirePackage{keyval}
+
+绘图依赖 pict2e 宏包。
+2 \RequirePackage{pict2e}
+
+长度计算 calc 宏包。
+3 \RequirePackage{calc}
+
+内部控制 array 宏包。
+4 \RequirePackage{array}
+
+7.2
+
+资源分配
+分配用到的盒子寄存器。它们分别对应于 \diagbox 三个必选参数的内容。
+
+5 \newbox\diagbox@boxa
+6 \newbox\diagbox@boxb
+7 \newbox\diagbox@boxm
+
+分配长度变量。
+8 \newdimen\diagbox@wd
+9 \newdimen\diagbox@ht
+10 \newdimen\diagbox@insepl
+11 \newdimen\diagbox@insepr
+12 \newdimen\diagbox@outsepl
+13 \newdimen\diagbox@outsepr
+14 \def\diagbox@clear{%
+15
+
+\diagbox@wd=\z@
+
+16
+
+\diagbox@ht=\z@
+
+17
+
+\diagbox@insepl=\tabcolsep
+
+18
+
+\diagbox@insepr=\tabcolsep
+
+19
+
+\diagbox@outsepl=-\tabcolsep
+
+20
+
+\diagbox@outsepr=-\tabcolsep
+
+21 }
+
+7.3
+
+命令选项定义
+下面定义 \diagbox 的键值选项。
+斜线盒子的总宽度。
+
+22 \define@key{diagbox}{width}{%
+23
+
+\unless\ifdim\diagbox@wd=\z@
+
+24
+
+\PackageWarning{diagbox}%
+
+25
+
+{You should not set width/innerwidth option more than once.}%
+
+13
+
+26
+
+\fi
+
+27
+
+\setlength{\diagbox@wd}{#1}}
+
+斜线盒子的总高度，参数中可使用 \line 表示行高。
+28 \define@key{diagbox}{height}{%
+29
+
+\let\diagbox@save@line\line
+
+30
+
+\def\line{\normalbaselineskip}%
+
+31
+
+\setlength{\diagbox@ht}{#1}%
+
+32
+
+\let\line\diagbox@save@line}
+
+盒子内容与斜线框左右的距离。
+33 \define@key{diagbox}{innerleftsep}{%
+34
+
+\setlength{\diagbox@insepl}{#1}}
+
+35 \define@key{diagbox}{innerrightsep}{%
+36
+
+\setlength{\diagbox@insepr}{#1}}
+
+设置盒子内容的宽度（与列格式 p{宽度} 对应）。盒子内容宽度加上盒子与斜线框
+左右距离之和应为斜线盒子总宽度，即有
+innerleftsep + innerwidth + innerrightsep = width.
+innerwidth 选项将通过设置盒子总宽度，维护上面的关系式。
+37 \define@key{diagbox}{innerwidth}{%
+38
+
+\unless\ifdim\diagbox@wd=\z@
+
+39
+
+\PackageWarning{diagbox}%
+{You should not set width/innerwidth option more than once.}%
+
+40
+41
+
+\fi
+
+42
+
+\setlength{\diagbox@wd}{#1+\diagbox@insepl+\diagbox@insepr}}
+
+斜线盒子与表格单元边框距离。该外部间距应为实际表列内容与列分隔线之间距离
+的相反数，以此保证斜线与表格竖线能相接，即应输入参数保证
+outerleftsep + LEFTtabcolsep = 0 pt,
+outerrightsep + RIGHTtabcolsep = 0 pt.
+43 \define@key{diagbox}{outerleftsep}{%
+44
+
+\setlength{\diagbox@outsepl}{#1}}
+
+45 \define@key{diagbox}{outerrightsep}{%
+46
+
+\setlength{\diagbox@outsepr}{#1}}
+
+设置左右边距，它将同时设置盒子内容与斜线框的内部间距，以及斜线盒子与表格
+单元边框的外部间距。并保持关系：
+innerleftsep := leftsep,
+
+innerrightsep := rightsep,
+
+outerleftsep := −leftsep,
+
+outerrightsep := −rightsep.
+
+47 \define@key{diagbox}{leftsep}{%
+48
+
+\setlength{\diagbox@insepl}{#1}%
+
+49
+
+\setlength{\diagbox@outsepl}{(#1)*-1}}
+
+14
+
+50 \define@key{diagbox}{rightsep}{%
+51
+
+\setlength{\diagbox@insepr}{#1}%
+
+52
+
+\setlength{\diagbox@outsepr}{(#1)*-1}}
+
+盒子计算边界时是否忽略左右的空白。trim=l 效果等同于 leftsep=0pt；trim=r
+效果等同于 rightsep=0pt。
+53 \define@key{diagbox}{trim}{%
+54
+55
+
+\@tfor\@reserveda:=#1\do{%
+\ifcsname diagbox@insep\@reserveda\endcsname
+
+56
+
+\setlength{\csname diagbox@insep\@reserveda\endcsname}{\z@}%
+
+57
+
+\setlength{\csname diagbox@outsep\@reserveda\endcsname}{\z@}%
+
+58
+
+\else
+\PackageError{diagbox}{Unknown trim option `#1'.}{l, r, lr and rl are supported.}%
+
+59
+60
+
+\fi}}
+
+盒子的方向。
+61 \define@key{diagbox}{dir}{%
+62
+
+\def\diagbox@dir{#1}%
+
+63
+
+\unless\ifcsname diagbox@dir@#1\endcsname
+
+64
+65
+66
+
+\PackageError{diagbox}{Unknown direction `#1'.}{NW, NE, SW, SE are supported.}%
+\def\diagbox@dia{NW}%
+\fi}
+
+67 \let\diagbox@dir@SE\relax
+68 \let\diagbox@dir@SW\relax
+69 \let\diagbox@dir@NE\relax
+70 \let\diagbox@dir@NW\relax
+
+斜线宽度与颜色。
+71 \define@key{diagbox}{linewidth}{%
+72
+
+\setlength{\@tempskipa}{#1}%
+
+73
+
+\linethickness{\@tempskipa}}
+
+74 \define@key{diagbox}{linecolor}{%
+75
+
+\def\diagbox@setlinecolor{\color{#1}}}
+
+76 \let\diagbox@setlinecolor\empty
+
+设置内容字体。
+77 \define@key{diagbox}{font}{%
+78
+
+\def\diagbox@font{#1}}
+
+79 \let\diagbox@font\empty
+
+7.4
+\diagbox@pict
+
+绘制斜线盒子
+
+这是带斜线的盒子本身。由一个 picture 环境实现。
+80 \def\diagbox@pict{%
+81
+
+\unitlength\p@
+
+82
+
+\begin{picture}
+
+83
+
+(\strip@pt\dimexpr\diagbox@wd+\diagbox@outsepl+\diagbox@outsepr\relax,\strip@pt\diagbox@ht)
+
+15
+
+84
+85
+86
+
+\diagbox@double@pict@SE
+
+(\strip@pt\dimexpr-\diagbox@outsepl\relax,0)
+\@nameuse{diagbox@\diagbox@part @pict@\diagbox@dir}
+\end{picture}}
+
+方向为 SE 的斜线盒子内容。
+87 \def\diagbox@double@pict@SE{%
+
+\diagbox@double@pict@NW
+
+88
+
+\put(0,0) {\makebox(0,0)[bl]{\box\diagbox@boxa}}
+
+89
+
+\put(\strip@pt\diagbox@wd,\strip@pt\diagbox@ht) {\makebox(0,0)[tr]{\box\diagbox@boxb}}
+
+90
+
+\diagbox@setlinecolor
+
+91
+
+\Line(0,\strip@pt\diagbox@ht)(\strip@pt\diagbox@wd,0)}
+
+方向 NW 与 SE 相同。
+92 \let\diagbox@double@pict@NW\diagbox@double@pict@SE
+
+\diagbox@double@pict@NE
+
+方向为 NE 的斜线盒子内容。
+93 \def\diagbox@double@pict@NE{%
+
+\diagbox@double@pict@NE
+
+94
+
+\put(0,\strip@pt\diagbox@ht) {\makebox(0,0)[tl]{\box\diagbox@boxa}}
+
+95
+
+\put(\strip@pt\diagbox@wd,0) {\makebox(0,0)[br]{\box\diagbox@boxb}}
+
+96
+
+\diagbox@setlinecolor
+
+97
+
+\Line(0,0)(\strip@pt\diagbox@wd,\strip@pt\diagbox@ht)}
+
+方向 SW 与 NE 相同。
+98 \let\diagbox@double@pict@SW\diagbox@double@pict@NE
+
+\diagbox@double
+
+分成两部分的盒子。三个参数，分别为 key-value 格式的可选项、左半边内容、右半边
+内容。这里的主要工作是读入参数并计算斜线盒子的大小。
+这里自动计算斜线盒子大小的算法为：斜线盒子的宽度取两个子盒宽度较大值的二
+倍，而高度则直接取两个子盒的总高度。
+99 \def\diagbox@double#1#2#3{%
+100
+
+\begingroup
+
+101
+
+\diagbox@clear
+
+102
+
+\def\diagbox@part{double}%
+
+103
+
+\setkeys{diagbox}{dir=NW,#1}%
+
+104
+
+\setbox\diagbox@boxa=\hbox{%
+
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+
+\begin{tabular}{@{\hspace{\diagbox@insepl}}>{\diagbox@font}l@{}}
+#2
+\end{tabular}}%
+\setbox\diagbox@boxb=\hbox{%
+\begin{tabular}{@{}>{\diagbox@font}r@{\hspace{\diagbox@insepr}}}
+#3
+\end{tabular}}%
+\ifdim\diagbox@wd=\z@
+\ifdim\wd\diagbox@boxa>\wd\diagbox@boxb
+\diagbox@wd=\dimexpr2\wd\diagbox@boxa+\diagbox@insepl+\diagbox@insepr\relax
+\else
+\diagbox@wd=\dimexpr2\wd\diagbox@boxb+\diagbox@insepl+\diagbox@insepr\relax
+
+16
+
+117
+
+\fi
+
+118
+
+\fi
+
+119
+
+\ifdim\diagbox@ht=\z@
+
+120
+
+\diagbox@ht=\dimexpr\ht\diagbox@boxa+\dp\diagbox@boxa+\ht\diagbox@boxb+\dp\diagbox@boxb\relax
+
+121
+
+\fi
+
+122
+
+$\vcenter{\hbox{\diagbox@pict}}$%
+
+123
+
+\endgroup}
+
+diagbox@triple@setbox@NW
+124 \def\diagbox@triple@setbox@NW#1#2#3{%
+125
+126
+
+\setbox\diagbox@boxa=\hbox{%
+\begin{tabular}{@{\hspace{\diagbox@insepl}}>{\diagbox@font}l@{}}
+#1
+
+127
+128
+129
+130
+
+\end{tabular}}%
+\setbox\diagbox@boxm=\hbox{%
+\begin{tabular}{@{\hspace{\diagbox@insepl}}>{\diagbox@font}l@{}}
+#2
+
+131
+132
+133
+134
+
+\end{tabular}}%
+\setbox\diagbox@boxb=\hbox{%
+\begin{tabular}{@{}>{\diagbox@font}r@{\hspace{\diagbox@insepr}}}
+#3
+
+135
+136
+
+\end{tabular}}}
+
+diagbox@triple@setbox@SW
+137 \let\diagbox@triple@setbox@SW\diagbox@triple@setbox@NW
+
+diagbox@triple@setbox@SE
+138 \def\diagbox@triple@setbox@SE#1#2#3{%
+139 \setbox\diagbox@boxa=\hbox{%
+140
+141
+142
+
+\begin{tabular}{@{\hspace{\diagbox@insepl}}>{\diagbox@font}l@{}}
+#1
+\end{tabular}}%
+
+143 \setbox\diagbox@boxm=\hbox{%
+144
+145
+146
+
+\begin{tabular}{@{}>{\diagbox@font}r@{\hspace{\diagbox@insepr}}}
+#2
+\end{tabular}}%
+
+147 \setbox\diagbox@boxb=\hbox{%
+148
+149
+150
+
+\begin{tabular}{@{}>{\diagbox@font}r@{\hspace{\diagbox@insepr}}}
+#3
+\end{tabular}}}
+
+diagbox@triple@setbox@NE
+151 \let\diagbox@triple@setbox@NE\diagbox@triple@setbox@SE
+
+\diagbox@triple@pict@NW
+152 \def\diagbox@triple@pict@NW{%
+
+17
+
+153
+
+\put(0,0)
+
+{\makebox(0,0)[bl]{\box\diagbox@boxa}}
+
+154
+
+\put(0,\y)
+
+{\makebox(0,0)[tl]{\box\diagbox@boxm}}
+
+155
+
+\put(\x,\y) {\makebox(0,0)[tr]{\box\diagbox@boxb}}
+
+156
+
+\diagbox@setlinecolor
+
+157
+
+\Line(0,\yym)(\x,0)
+
+158
+
+\Line(\xm,\y)(\x,0)}
+
+\diagbox@triple@pict@NE
+159 \def\diagbox@triple@pict@NE{%
+160
+
+\put(0,\y)
+
+{\makebox(0,0)[tl]{\box\diagbox@boxa}}
+
+161
+
+\put(\x,\y) {\makebox(0,0)[tr]{\box\diagbox@boxm}}
+
+162
+
+\put(\x,0)
+
+163
+
+\diagbox@setlinecolor
+
+164
+
+\Line(0,0)(\xxm,\y)
+
+165
+
+\Line(0,0)(\x,\yym)}
+
+{\makebox(0,0)[br]{\box\diagbox@boxb}}
+
+\diagbox@triple@pict@SW
+166 \def\diagbox@triple@pict@SW{%
+167
+
+\put(0,\y) {\makebox(0,0)[tl]{\box\diagbox@boxa}}
+
+168
+
+\put(0,0)
+
+169
+
+\put(\x,0) {\makebox(0,0)[br]{\box\diagbox@boxb}}
+
+170
+
+\diagbox@setlinecolor
+
+171
+
+\Line(0,\ym)(\x,\y)
+
+172
+
+\Line(\xm,0)(\x,\y)}
+
+{\makebox(0,0)[bl]{\box\diagbox@boxm}}
+
+\diagbox@triple@pict@SE
+173 \def\diagbox@triple@pict@SE{%
+
+\diagbox@triplebox
+
+174
+
+\put(0,0)
+
+{\makebox(0,0)[bl]{\box\diagbox@boxa}}
+
+175
+
+\put(\x,0)
+
+{\makebox(0,0)[br]{\box\diagbox@boxm}}
+
+176
+
+\put(\x,\y) {\makebox(0,0)[tr]{\box\diagbox@boxb}}
+
+177
+
+\diagbox@setlinecolor
+
+178
+
+\Line(0,\y)(\xxm,0)
+
+179
+
+\Line(0,\y)(\x,\ym)}
+
+分成三部分的盒子。四个参数，分别为 key-value 格式的可选项、左半边内容、中间内
+容、右半边内容。
+180 \def\diagbox@triple#1#2#3#4{%
+181
+
+\begingroup
+
+182
+
+\diagbox@clear
+
+183
+
+\def\diagbox@part{triple}%
+
+184
+
+\setkeys{diagbox}{dir=NW,#1}%
+
+185
+
+\@nameuse{diagbox@triple@setbox@\diagbox@dir}{#2}{#3}{#4}%
+
+在宏包最后定义，需要返回 \x, \xm, \xxm, \y, \ym 和 \yym。
+186
+
+\diagbox@solve@equations
+
+187
+
+$\vcenter{\hbox{\diagbox@pict}}$%
+
+188
+
+\endgroup}
+
+18
+
+7.5
+\diagbox
+
+用户命令
+
+主要的用户命令。判断使用两部分还是三部分的盒子。
+189 \newcommand\diagbox[3][]{%
+190
+191
+
+\@ifnextchar\bgroup
+{\diagbox@triple{#1}{#2}{#3}}{\diagbox@double{#1}{#2}{#3}}}
+
+以下代码用来模拟 slashbox 宏包的功能。
+禁止读入 slashbox。
+192 \expandafter\xdef\csname
+
+\slashbox
+
+ver@slashbox.\@pkgextension\endcsname{9999/99/99}
+
+模拟 \slashbox。
+193 \def\slashbox{%
+
+\backslashbox
+
+194
+
+\def\diagbox@slashbox@options{dir=SW,}%
+
+195
+
+\slashbox@}
+
+模拟 \backslashbox。
+196 \def\backslashbox{%
+197
+
+\def\diagbox@slashbox@options{dir=NW,}%
+
+198
+
+\slashbox@}
+
+\slashbox@
+199 \newcommand\slashbox@[1][]{%
+200
+201
+
+\ifx\relax#1\relax\else
+\edef\diagbox@slashbox@options{%
+\unexpanded\expandafter{\diagbox@slashbox@options}%
+
+202
+
+\unexpanded{width=#1,}}%
+
+203
+204
+
+\fi
+
+205
+
+\slashbox@@}
+
+\slashbox@@
+206 \newcommand\slashbox@@[3][]{%
+207
+208
+209
+210
+
+7.6
+
+\edef\diagbox@slashbox@options{%
+\unexpanded\expandafter{\diagbox@slashbox@options}%
+\unexpanded{trim=#1,}}%
+\expandafter\diagbox\expandafter[\diagbox@slashbox@options]{#2}{#3}}
+
+解方程组
+这里计算双斜线盒子宽、高的算法是简单而直观的。如下图所示，将 A、M、B 三
+
+个子盒子分别放在斜线盒的三个角后，斜线正好使 M 盒、A 或 B 盒、斜线盒的一角三
+点共线。
+M
+
+B
+
+A
+
+19
+
+\diagbox@solve@equations
+
+在 A、M、B 三个盒子内容确定后，斜线盒的宽、高即可通过相似三角形的比例关系
+求解。设斜线盒的宽、高为 x, y，而 A、M、B 盒的宽、高分别为 (xa , ya ), (xm , ym ),
+(xb , yb )。则有：
+x
+y − ym
+=
+,
+xa
+y − ym − ya
+y
+x − xm
+=
+.
+yb
+x − xm − xb
+该方程组通常可化简为一个一元二次方程求解，两组共轭根中可以只需要较大的一组。
+通过 Mathematica 软件，容易得到方程组的解为：
+√
+u+v± ∆
+,
+x=
+2(t − yb )
+√
+u−v∓ ∆
+y=
+,
+2(xa − s)
+(
+)
+∆ := (u + v)2 + 4xa (t − yb ) xm (yb − ym ) − xb ym ,
+u := xa ym − xm yb ,
+v := st − xa yb ,
+s := xb + xm ,
+t := ya + ym .
+但须注意上面的方程组并非总有正的实根，经过简单的代数分析可知，要给出几何直观
+的可行解（正实根），需要同时满足以下条件：
+x a < x m + xb ,
+yb < ym + ya .
+该条件需要在计算中予以检查。
+如果 expl3 环境可用，就使用 l3fp 计算，否则使用 fp 包。
+211 \ifcsname\detokenize{fp_eval:n}\endcsname
+212 \csname
+
+fi\endcsname
+
+213 \ExplSyntaxOn
+214 ⟨@@=diagbox⟩
+215 \cs_new_protected:Npn
+216
+
+\@@_solve_equations:
+
+{
+
+取长宽。
+217
+218
+219
+220
+221
+222
+223
+
+\fp_set:Nn \l_@@_xa_fp
+{ \dim_to_fp:n { \wd \diagbox@boxa } }
+\fp_set:Nn \l_@@_ya_fp
+{ \dim_to_fp:n { \ht \diagbox@boxa + \dp \diagbox@boxa } }
+\fp_set:Nn \l_@@_xb_fp
+{ \dim_to_fp:n { \wd \diagbox@boxb } }
+\fp_set:Nn \l_@@_yb_fp
+
+20
+
+{ \dim_to_fp:n { \ht \diagbox@boxb + \dp \diagbox@boxb } }
+
+224
+
+\fp_set:Nn \l_@@_xm_fp
+
+225
+
+{ \dim_to_fp:n { \wd \diagbox@boxm } }
+
+226
+
+\fp_set:Nn \l_@@_ym_fp
+
+227
+
+{ \dim_to_fp:n { \ht \diagbox@boxm + \dp \diagbox@boxm } }
+
+228
+229
+
+\fp_set:Nn \l_@@_s_fp { \l_@@_xb_fp + \l_@@_xm_fp }
+
+230
+
+\fp_set:Nn \l_@@_t_fp { \l_@@_ya_fp + \l_@@_ym_fp }
+
+如果宽度和长度都被指定了，就不需要列方程组求解。
+231
+
+\fp_set_eq:NN \l_@@_delta_fp \c_nan_fp
+
+232
+
+\dim_compare:nNnTF \diagbox@wd = \c_zero_dim
+{ \@@_calculate_width: }
+
+233
+
+{ \fp_set:Nn \l_@@_x_fp { \dim_to_fp:n { \diagbox@wd } } }
+
+234
+
+\dim_compare:nNnTF \diagbox@ht = \c_zero_dim
+
+235
+236
+
+{ \@@_calculate_height: }
+
+237
+
+{ \fp_set:Nn \l_@@_y_fp { \dim_to_fp:n { \diagbox@ht } } }
+
+238
+
+\edef \x
+
+{ \fp_use:N \l_@@_x_fp }
+
+239
+
+\edef \y
+
+{ \fp_use:N \l_@@_y_fp }
+
+240
+
+\edef \xm
+
+{ \fp_use:N \l_@@_xm_fp }
+
+241
+
+\edef \ym
+
+{ \fp_use:N \l_@@_ym_fp }
+
+242
+
+\edef \xxm { \fp_eval:n { \l_@@_x_fp - \l_@@_xm_fp } }
+
+243
+
+\edef \yym { \fp_eval:n { \l_@@_y_fp - \l_@@_ym_fp } }
+
+244
+
+}
+
+检查可行解条件，解二次方程。这里对于无正实根的情形，会给出一个宽松的值作为斜
+线盒子的宽高：
+x = 2 max(xa + xm , xb + xm ),
+y = 2 max(ya + ym , yb + ym ).
+245 \cs_new_protected:Npn
+246
+
+\@@_calculate_width:
+
+{
+
+247
+
+\fp_zero:N \l_@@_x_fp
+
+248
+
+\fp_compare:nNnT \l_@@_yb_fp < \l_@@_t_fp
+
+249
+
+{
+
+250
+
+\@@_calculate_coefficient:
+
+251
+
+\fp_if_nan:nF { \l_@@_sqrt_fp }
+{
+
+252
+
+\fp_set:Nn \l_@@_x_fp
+
+253
+
+{
+
+254
+
+( \l_@@_u_fp + \l_@@_v_fp + \l_@@_sqrt_fp ) /
+
+255
+
+( 2 ( \l_@@_t_fp - \l_@@_yb_fp ) )
+
+256
+
+}
+
+257
+
+}
+
+258
+259
+260
+261
+
+}
+\fp_compare:nNnF \l_@@_x_fp > \c_zero_fp
+{
+
+21
+
+\fp_set:Nn \l_@@_x_fp
+
+262
+
+{ 2 ( max( \l_@@_xa_fp , \l_@@_xb_fp ) + \l_@@_xm_fp ) }
+
+263
+
+\msg_warning:nnxx { diagbox } { calculate-error }
+
+264
+
+{ width } { \fp_use:N \l_@@_x_fp }
+
+265
+
+}
+
+266
+
+\diagbox@wd = \fp_to_dim:N \l_@@_x_fp \scan_stop:
+
+267
+268
+
+}
+
+269 \cs_new_protected:Npn
+270
+
+\@@_calculate_height:
+
+{
+
+271
+
+\fp_zero:N \l_@@_y_fp
+
+272
+
+\fp_compare:nNnT \l_@@_xa_fp < \l_@@_s_fp
+{
+
+273
+274
+
+\@@_calculate_coefficient:
+
+275
+
+\fp_if_nan:nF { \l_@@_sqrt_fp }
+{
+
+276
+
+\fp_set:Nn \l_@@_y_fp
+
+277
+
+{
+
+278
+279
+
+( \l_@@_u_fp - \l_@@_v_fp - \l_@@_sqrt_fp ) /
+
+280
+
+( 2 ( \l_@@_xa_fp - \l_@@_s_fp ) )
+}
+
+281
+
+}
+
+282
+
+}
+
+283
+
+\fp_compare:nNnF \l_@@_y_fp > \c_zero_fp
+
+284
+
+{
+
+285
+
+\fp_set:Nn \l_@@_y_fp
+
+286
+
+{ 2 ( max( \l_@@_ya_fp , \l_@@_yb_fp ) + \l_@@_ym_fp ) }
+
+287
+
+\msg_warning:nnxx { diagbox } { calculate-error }
+
+288
+
+{ height } { \fp_use:N \l_@@_y_fp }
+
+289
+
+}
+
+290
+
+\diagbox@ht = \fp_to_dim:N \l_@@_y_fp \scan_stop:
+
+291
+292
+
+}
+
+293 \cs_new_protected:Npn
+294
+
+\fp_if_nan:nT { \l_@@_delta_fp }
+
+295
+
+{ \@@_calculate_coefficient_aux: }
+
+296
+297
+
+}
+
+298 \cs_new_protected:Npn
+299
+300
+301
+
+\fp_set:Nn \l_@@_u_fp
+{
+\l_@@_xa_fp * \l_@@_ym_fp \l_@@_xm_fp * \l_@@_yb_fp
+
+303
+
+305
+306
+307
+
+\@@_calculate_coefficient_aux:
+
+{
+
+302
+
+304
+
+\@@_calculate_coefficient:
+
+{
+
+}
+\fp_set:Nn \l_@@_v_fp
+{
+\l_@@_s_fp * \l_@@_t_fp -
+
+22
+
+\l_@@_xa_fp * \l_@@_yb_fp
+
+308
+
+}
+
+309
+
+\fp_set:Nn \l_@@_delta_fp
+
+310
+
+{
+
+311
+312
+
+( \l_@@_u_fp + \l_@@_v_fp )^2 +
+
+313
+
+4 * \l_@@_xa_fp * ( \l_@@_t_fp - \l_@@_yb_fp ) *
+( \l_@@_xm_fp * ( \l_@@_yb_fp - \l_@@_ym_fp ) -
+
+314
+
+\l_@@_xb_fp * \l_@@_ym_fp )
+
+315
+
+}
+
+316
+317
+
+\fp_compare:nNnTF \l_@@_delta_fp < \c_zero_fp
+
+318
+
+{ \fp_set_eq:NN \l_@@_sqrt_fp \c_nan_fp }
+{ \fp_set:Nn \l_@@_sqrt_fp { sqrt(\l_@@_delta_fp) } }
+
+319
+320
+
+}
+
+321 \cs_new_eq:NN
+
+\diagbox@solve@equations \@@_solve_equations:
+
+322 \fp_new:N
+
+\l_@@_xa_fp
+
+323 \fp_new:N
+
+\l_@@_ya_fp
+
+324 \fp_new:N
+
+\l_@@_xb_fp
+
+325 \fp_new:N
+
+\l_@@_yb_fp
+
+326 \fp_new:N
+
+\l_@@_xm_fp
+
+327 \fp_new:N
+
+\l_@@_ym_fp
+
+328 \fp_new:N
+
+\l_@@_x_fp
+
+329 \fp_new:N
+
+\l_@@_y_fp
+
+330 \fp_new:N
+
+\l_@@_s_fp
+
+331 \fp_new:N
+
+\l_@@_t_fp
+
+332 \fp_new:N
+
+\l_@@_u_fp
+
+333 \fp_new:N
+
+\l_@@_v_fp
+
+334 \fp_new:N
+
+\l_@@_sqrt_fp
+
+335 \fp_new:N
+
+\l_@@_delta_fp
+
+336 \msg_new:nnn
+337
+
+{ diagbox } { calculate-error }
+
+{
+
+338
+
+Cannot~calculate~proper~#1~of~triple~diagbox~
+
+339
+
+\msg_line_context:. \\
+
+340
+
+Use~#2pt~instead.
+
+341
+
+}
+
+342 \file_input_stop:
+
+若 l3fp 不可用，则引入 fp 包计算。
+343 \fi
+344 \RequirePackage{fp}
+345 \FPmessagesfalse
+346 \def\diagbox@solve@equations{%
+
+取长宽
+347
+
+\edef\xa{\strip@pt\wd\diagbox@boxa}%
+
+348
+
+\edef\ya{\strip@pt\dimexpr\ht\diagbox@boxa+\dp\diagbox@boxa\relax}%
+
+349
+
+\edef\xb{\strip@pt\wd\diagbox@boxb}%
+
+350
+
+\edef\yb{\strip@pt\dimexpr\ht\diagbox@boxb+\dp\diagbox@boxb\relax}%
+
+23
+
+351
+
+\edef\xm{\strip@pt\wd\diagbox@boxm}%
+
+352
+
+\edef\ym{\strip@pt\dimexpr\ht\diagbox@boxm+\dp\diagbox@boxm\relax}%
+
+列方程，计算方程系数
+353
+
+\FPneg\bi\yb
+
+354
+
+\FPadd\ci\xb\xm
+
+355
+
+\FPmul\di\xm\yb
+
+356
+
+\FPadd\bj\ya\ym
+
+357
+
+\FPneg\cj\xa
+
+358
+
+\FPmul\dj\xa\ym
+
+\FPneg\ci\ci
+\FPneg\bj\bj
+
+检查可行解条件，解二次方程。这里对于无正实根的情形，会给出一个宽松的值作为斜
+线盒子的宽高：
+x = 2 max(xa + xm , xb + xm ),
+y = 2 max(ya + ym , yb + ym ).
+359
+
+\FPsub\u\dj\di
+
+360
+
+\FPupn{v}{bj ci * bi cj * -}%
+
+361
+
+\FPupn{delta}{bi dj * bj di * - cj ci - * 4 * v u + copy * -}%
+
+362
+
+\newif\ifdeltapositive
+
+363
+
+\FPifneg\delta \deltapositivefalse \else \deltapositivetrue \fi
+
+364
+
+\FPset\x{0}%
+
+365
+
+\FPset\y{0}%
+
+366
+
+\ifdim\diagbox@wd=\z@
+
+367
+
+\ifdim\bi\p@>\bj\p@\ifdeltapositive
+\FPupn{x}{2 bj bi - 2 delta root v u - + / /}%
+
+368
+369
+
+\fi\fi
+
+370
+
+\ifdim\x\p@=\z@
+
+371
+
+\FPupn{x}{xa xm + xb xm + max 2 *}%
+
+372
+
+\PackageWarning{diagbox}{Cannot calculate proper width of triple diagbox.\MessageBreak
+Use \x pt instead.}%
+
+373
+374
+375
+376
+377
+
+\fi
+\diagbox@wd=\x\p@
+\else
+\edef\x{\strip@pt\diagbox@wd}%
+
+378
+
+\fi
+
+379
+
+\ifdim\diagbox@ht=\z@
+
+380
+381
+
+\ifdim\ci\p@<\cj\p@\ifdeltapositive
+\FPupn{y}{2 cj ci - 2 delta root v u + - / /}%
+
+382
+
+\fi\fi
+
+383
+
+\ifdim\y\p@=\z@
+
+384
+
+\FPupn{y}{ya ym + yb ym + max 2 *}%
+
+385
+
+\PackageWarning{diagbox}{Cannot calculate proper height of triple diagbox.\MessageBreak
+Use \y pt instead.}%
+
+386
+387
+
+\fi
+
+388
+
+\diagbox@ht=\y\p@
+
+24
+
+\else
+
+389
+
+\edef\y{\strip@pt\diagbox@ht}%
+
+390
+391
+
+\fi
+
+392
+
+\FPsub\xxm\x\xm
+
+393
+
+\FPsub\yym\y\ym
+
+394 }
+
+版本历史
+
+8
+
+选项。 . . . . . . . . . . . . . . . . . . . . . . . 14
+
+v1.0
+General: 初始版本。 . . . . . . . . . . . . . . . . 1
+
+允许在 height 选项中使用 \line 表示
+行高。 . . . . . . . . . . . . . . . . . . . . . . . 13
+
+v2.0
+General: 变更 trim 选项的行为，去掉了
+
+允许在 width 和 height 的命令选项中
+
+使用 trim 选项时内部的间距。这与
+
+写表达式计算长度。 . . . . . . . . . . . . . 13
+
+slashbox 行为不同。 . . . . . . . . . . . . . 10
+
+增加命令选项 font 支持设置内容字
+
+增加有三部分、双斜线的表头格式。. . . 8
+
+体。. . . . . . . . . . . . . . . . . . . . . . . . . 15
+
+\diagbox: 判断参数个数，选择两部分或
+
+增加命令选项 linewidth, linecolor
+
+三部分盒子。 . . . . . . . . . . . . . . . . . . 19
+
+设置斜线宽度与颜色。 . . . . . . . . . . . 15
+
+\diagbox@double: 在使用 trim 选项时
+
+左右边距 leftsep, rightsep 命令选
+
+去掉内容与盒子边界的间距。这与
+
+项。. . . . . . . . . . . . . . . . . . . . . . . . . 14
+
+slashbox 的行为不同。 . . . . . . . . . . . 16
+
+v2.2
+
+\diagbox@triplebox: 新增三部分双斜线
+
+General: 避免 fp 包的 nomessages 选项
+
+的盒子 . . . . . . . . . . . . . . . . . . . . . . 18
+
+在使用 catoptions 包时冲突 . . . . . . . 13
+使用 calc 包计算选项参数，以支持
+
+v2.1
+General: 盒子内容宽度 innerwidth 命令
+
+\widthof 等命令。. . . . . . . . . . . . . . 13
+
+选项。 . . . . . . . . . . . . . . . . . . . . . . . 14
+
+v2.3
+
+盒子内容与斜线框距离 innerleftsep,
+
+\diagbox@triplebox: 检测二次方程无
+
+innerrightsep 命令选项。. . . . . . . . 14
+
+解、异常解的情形 . . . . . . . . . . . . . . 18
+
+斜线盒子与表格单元边框距离
+
+v2.4
+
+outerleftsep, outerrightsep 命令
+
+General: 利用 l3fp 解方程组。. . . . . . . . 19
+
+9 Index / 代码索引
+斜体的数字表示对应项说明所在的页码。下划线的数字表示定义所在的代码行号；
+而直立体的数字表示对应项使用时所在的行号。
+B
+
+\color . . . . . . . . . . . . . . . 75
+
+\diagbox@boxa . . . . . . . .
+...
+
+\backslashbox . . . 5, 11, 196
+
+5, 88, 94, 104,
+
+\bi . . . . . . . . . . . . 353, 367
+
+D
+
+113, 114, 120, 125,
+
+\bj . . . . . . . . . . . . 356, 367
+
+\delta . . . . . . . . . . . . . . 363
+
+139, 153, 160, 167,
+
+\deltapositivefalse . . 363
+
+174, 218, 220, 347, 348
+
+C
+
+\deltapositivetrue . . . 363
+
+\ci . . . . . . . . . . . . 354, 380
+
+\di . . . . . . . . . . . . 355, 359
+
+...
+
+\cj . . . . . . . . . . . . 357, 380
+
+\diagbox . . . . 1, 7, 189, 210
+
+113, 116, 120, 133,
+
+25
+
+\diagbox@boxb . . . . . . . .
+6, 89, 95, 108,
+
+147, 155, 162, 169,
+176, 222, 224, 349, 350
+
+201, 202, 207, 208, 210
+\diagbox@solve@equations
+
+\diagbox@boxm . . . 7, 129,
+
+. . . . . . . . . . . 186, 211
+
+143, 154, 161, 168,
+
+\diagbox@triple . . 180, 191
+
+175, 226, 228, 351, 352
+
+\diagbox@triple@pict@NE
+
+\diagbox@clear
+
+14, 101, 182
+
+\diagbox@dia
+
+. . . . . . . . . 65
+
+\diagbox@dir
+
+. . 62, 85, 185
+
+\diagbox@dir@NE . . . . . . . 69
+\diagbox@dir@NW . . . . . . . 70
+\diagbox@dir@SE . . . . . . . 67
+\diagbox@dir@SW . . . . . . . 68
+\diagbox@double . . . 99, 191
+\diagbox@double@pict@NE
+. . . . . . . . . . . . 93, 98
+\diagbox@double@pict@NW 92
+\diagbox@double@pict@SE
+. . . . . . . . . . . . 87, 92
+\diagbox@double@pict@SW 98
+
+. . . . . . . . . . . . . . 152
+
+. . . . . . . . . . . . . . 166
+\diagbox@triple@setbox@NE
+. . . . . . . . . . . . . . 151
+
+\diagbox@triple@setbox@SE
+
+83, 89, 91, 95, 97,
+
+97, 119, 120, 235,
+
+112, 114, 116, 232,
+
+237, 291, 379, 388, 390
+
+234, 267, 366, 375, 377
+
+E
+
+\diagbox@insepr . . . 11,
+18, 36, 42, 51, 109,
+
+\ExplSyntaxOn . . . . . . . . 213
+
+\diagbox@setlinecolor .
+
+F
+
+\diagbox@slashbox@options
+. . . . . . . 194, 197,
+
+U
+\u . . . . . . . . . . . . . . . . . 359
+X
+\x . . . . . . . . . . 155, 157,
+158, 161, 162, 165,
+169, 171, 172, 175,
+176, 179, 238, 364,
+370, 373, 375, 377, 392
+347, 357, 358
+
+\xb . . . . . . . . . . . . 349, 354
+\xm . . . . . . . . . 158, 172,
+240, 351, 354, 355, 392
+\xxm
+
+\file . . . . . . . . . . . . . . . 342
+
+. . . . 164, 178, 242, 392
+Y
+
+\FPifneg . . . . . . . . . . . . 363
+
+\y . . . . . . . . . . 154, 155,
+
+\FPmessagesfalse . . . . . 345
+
+158, 160, 161, 164,
+
+\FPset . . . . . . . . . . 364, 365
+
+167, 171, 172, 176,
+178, 179, 239, 365,
+
+I
+\ifdeltapositive . . . . .
+. . . . . . . 362, 367, 380
+
+. . . . . . 75, 76, 90,
+96, 156, 163, 170, 177
+
+\tabcolsep . . 17, 18, 19, 20
+
+\xa . . . . . . . .
+\empty . . . . . . . . . . . . 76, 79
+
+\diagbox@save@line . 29, 32
+
+T
+
+\dj . . . . . . . . . . . . 358, 359
+
+17, 34, 42, 48, 105,
+
+\diagbox@pict . 80, 122, 187
+
+195, 198, 199
+
+\slashbox@@ . . . . . 205, 206
+
+. . . . . . . . . . . 138, 151
+
+31, 83, 89, 91, 94,
+
+\diagbox@part . 85, 102, 183
+
+\slashbox@ . .
+
+\diagbox@triple@setbox@SW
+
+15, 23, 27, 38, 42,
+
+. . . . 13, 20, 46, 52, 83
+
+\slashbox . . . . . . 5, 11, 193
+
+. . . . . . . . . . . 124, 137
+
+9, 16,
+
+\diagbox@outsepr . . . . .
+
+S
+
+\diagbox@triple@setbox@NW
+
+\diagbox@wd . . . . . . . 8,
+
+. 12, 19, 44, 49, 83, 84
+
+. . . . . 24, 39, 372, 385
+
+. . . . . . . . . . . . . . 173
+
+130, 134, 140, 144, 148
+
+114, 116, 134, 144, 148
+
+P
+\PackageWarning . . . . . .
+
+\diagbox@triple@pict@SW
+
+\diagbox@triplebox . . . 180
+
+\diagbox@outsepl . . . . .
+
+\normalbaselineskip . . . 30
+
+\diagbox@triple@pict@SE
+
+79, 105, 109, 126,
+
+114, 116, 126, 130, 140
+
+N
+
+. . . . . . . . . . . . . . 159
+
+. . . . . . . . . . . . . . 137
+
+\diagbox@insepl . . . 10,
+
+\MessageBreak . . . . 372, 385
+
+\diagbox@triple@pict@NW
+
+\diagbox@font . . . . . 78,
+
+\diagbox@ht . . . .
+
+M
+
+L
+
+383, 386, 388, 390, 393
+\ya . . . . . . . . . . . . 348, 356
+\yb . . . . . . . .
+
+\ym . . . . . . . . . 171, 179,
+241, 352, 356, 358, 393
+
+\line . . . . . . . . . . 29, 30, 32
+\linethickness . . . . . . . . 73
+
+26
+
+350, 353, 355
+
+\yym
+
+. . . . 157, 165, 243, 393
+
+

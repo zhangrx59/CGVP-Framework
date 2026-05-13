@@ -1,0 +1,188 @@
+\begin{thebibliography}{10}
+\expandafter\ifx\csname url\endcsname\relax
+  \def\url#1{\texttt{#1}}\fi
+\expandafter\ifx\csname urlprefix\endcsname\relax\def\urlprefix{URL }\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \def\href#1#2{#2} \def\path#1{#1}\fi
+
+\bibitem{yu2017melanoma}
+L.~Yu, H.~Chen, Q.~Dou, J.~Qin, P.-A. Heng, Automated melanoma recognition in
+  dermoscopy images via very deep residual networks, IEEE Transactions on
+  Medical Imaging 36~(4) (2016) 994--1004.
+
+\bibitem{hosny2022refined}
+K.~M. Hosny, M.~A. Kassem, Refined residual deep convolutional network for skin
+  lesion classification, Journal of Digital Imaging 35~(2) (2022) 258--280.
+
+\bibitem{wu2020skin}
+J.~Wu, W.~Hu, Y.~Wen, W.~Tu, X.~Liu, Skin lesion classification using densely
+  connected convolutional networks with attention residual learning, Sensors
+  20~(24) (2020) 7080.
+
+\bibitem{pacheco2020impact}
+A.~G. Pacheco, R.~A. Krohling, The impact of patient clinical information on
+  automated skin cancer detection, Computers in Biology and Medicine 116 (2020)
+  103545.
+
+\bibitem{khurshid2025multimodal}
+M.~Khurshid, R.~Singh, M.~Vatsa, Multimodal dual-stage feature refinement for
+  robust skin lesion classification, Scientific Reports 15~(1) (2025) 37775.
+
+\bibitem{li2020fusing}
+W.~Li, J.~Zhuang, R.~Wang, J.~Zhang, W.-S. Zheng, Fusing metadata and
+  dermoscopy images for skin disease diagnosis, in: 2020 IEEE 17th
+  International Symposium on Biomedical Imaging (ISBI), IEEE, 2020, pp.
+  1996--2000.
+
+\bibitem{pacheco2021attention}
+A.~G. Pacheco, R.~A. Krohling, An attention-based mechanism to combine images
+  and metadata in deep learning models applied to skin cancer classification,
+  IEEE Journal of Biomedical and Health Informatics 25~(9) (2021) 3554--3563.
+
+\bibitem{khurshid2024optimizing}
+M.~Khurshid, M.~Vatsa, R.~Singh, Optimizing skin lesion classification via
+  multimodal data and auxiliary task integration, in: 2024 IEEE International
+  Symposium on Biomedical Imaging (ISBI), IEEE, 2024, pp. 1--5.
+
+\bibitem{watson2026multimodal}
+M.~Watson, T.~Winterbottom, T.~Hudson, B.~Jones, H.~P. Shum,
+  A.~Atapour-Abarghouei, T.~Breckon, J.~Harmsworth~King, N.~Al~Moubayed,
+  Multimodal models for skin cancer classification using clinical freetext and
+  dermatoscopic images, Communications Medicine (2026).
+
+\bibitem{zhu2026concept}
+Y.~Zhu, X.~Wang, X.~Huang, M.~Xia, P.~Mu, H.~Hu, X.~Zhang, Enhancing the
+  interpretation of skin lesion diagnosis: Concept adaptive fine-tuning of
+  vision-language models, IEEE Journal of Biomedical and Health Informatics
+  (2025).
+
+\bibitem{zeng2025mmskin}
+W.~Zeng, Y.~Sun, C.~Ma, W.~Tan, B.~Yan, Mm-skin: Enhancing dermatology
+  vision-language model with an image-text dataset derived from textbooks, in:
+  Proceedings of the 33rd ACM International Conference on Multimedia, 2025, pp.
+  3769--3778.
+
+\bibitem{sellergren2025medgemma}
+A.~Sellergren, S.~Kazemzadeh, T.~Jaroensri, A.~Kiraly, M.~Traverse,
+  T.~Kohlberger, S.~Xu, F.~Jamil, C.~Hughes, C.~Lau, et~al., Medgemma technical
+  report, arXiv preprint arXiv:2507.05201 (2025).
+
+\bibitem{tschandl2018ham10000}
+P.~Tschandl, C.~Rosendahl, H.~Kittler, The ham10000 dataset, a large collection
+  of multi-source dermatoscopic images of common pigmented skin lesions,
+  Scientific Data 5~(1) (2018) 180161.
+
+\bibitem{pacheco2020padufes20}
+A.~G. Pacheco, G.~R. Lima, A.~S. Salomao, B.~Krohling, I.~P. Biral, G.~G.
+  De~Angelo, F.~C. Alves~Jr, J.~G. Esgario, A.~C. Simora, P.~B. Castro, et~al.,
+  Pad-ufes-20: A skin lesion dataset composed of patient data and clinical
+  images collected from smartphones, Data in Brief 32 (2020) 106221.
+
+\bibitem{esteva2017dermatologist}
+A.~Esteva, B.~Kuprel, R.~A. Novoa, J.~Ko, S.~M. Swetter, H.~M. Blau, S.~Thrun,
+  Dermatologist-level classification of skin cancer with deep neural networks,
+  nature 542~(7639) (2017) 115--118.
+
+\bibitem{codella2019skin}
+N.~Codella, V.~Rotemberg, P.~Tschandl, M.~E. Celebi, S.~Dusza, D.~Gutman,
+  B.~Helba, A.~Kalloo, K.~Liopyris, M.~Marchetti, et~al., Skin lesion analysis
+  toward melanoma detection 2018: A challenge hosted by the international skin
+  imaging collaboration (isic), arXiv preprint arXiv:1902.03368 (2019).
+
+\bibitem{simonyan2014very}
+K.~Simonyan, A.~Zisserman, Very deep convolutional networks for large-scale
+  image recognition, arXiv preprint arXiv:1409.1556 (2014).
+
+\bibitem{he2016deep}
+K.~He, X.~Zhang, S.~Ren, J.~Sun, Deep residual learning for image recognition,
+  in: Proceedings of the IEEE Conference on Computer Vision and Pattern
+  Recognition, 2016, pp. 770--778.
+
+\bibitem{huang2017densely}
+G.~Huang, Z.~Liu, L.~Van Der~Maaten, K.~Q. Weinberger, Densely connected
+  convolutional networks, in: Proceedings of the IEEE Conference on Computer
+  Vision and Pattern Recognition, 2017, pp. 4700--4708.
+
+\bibitem{tan2019efficientnet}
+M.~Tan, Q.~Le, Efficientnet: Rethinking model scaling for convolutional neural
+  networks, in: International Conference on Machine Learning, PMLR, 2019, pp.
+  6105--6114.
+
+\bibitem{sandler2018mobilenetv2}
+M.~Sandler, A.~Howard, M.~Zhu, A.~Zhmoginov, L.-C. Chen, Mobilenetv2: Inverted
+  residuals and linear bottlenecks, in: Proceedings of the IEEE Conference on
+  Computer Vision and Pattern Recognition, 2018, pp. 4510--4520.
+
+\bibitem{brinker2019deep}
+T.~J. Brinker, A.~Hekler, A.~H. Enk, J.~Klode, A.~Hauschild, C.~Berking,
+  B.~Schilling, S.~Haferkamp, D.~Schadendorf, T.~Holland-Letz, et~al., Deep
+  learning outperformed 136 of 157 dermatologists in a head-to-head dermoscopic
+  melanoma image classification task, European journal of cancer 113 (2019)
+  47--54.
+
+\bibitem{radford2021learning}
+A.~Radford, J.~W. Kim, C.~Hallacy, A.~Ramesh, G.~Goh, S.~Agarwal, G.~Sastry,
+  A.~Askell, P.~Mishkin, J.~Clark, et~al., Learning transferable visual models
+  from natural language supervision, in: International conference on machine
+  learning, PmLR, 2021, pp. 8748--8763.
+
+\bibitem{wang2022medclip}
+Z.~Wang, Z.~Wu, D.~Agarwal, J.~Sun, Medclip: Contrastive learning from unpaired
+  medical images and text, in: Proceedings of the 2022 Conference on Empirical
+  Methods in Natural Language Processing, 2022, pp. 3876--3887.
+
+\bibitem{zhang2023biomedclip}
+S.~Zhang, Y.~Xu, N.~Usuyama, H.~Xu, J.~Bagga, R.~Tinn, S.~Preston, R.~Rao,
+  M.~Wei, N.~Valluri, et~al., Biomedclip: A multimodal biomedical foundation
+  model pretrained from fifteen million scientific image-text pairs. arxiv
+  2023, arXiv preprint arXiv:2303.00915 70 (2023).
+
+\bibitem{li2023llavamed}
+C.~Li, C.~Wong, S.~Zhang, N.~Usuyama, H.~Liu, J.~Yang, T.~Naumann, H.~Poon,
+  J.~Gao, Llava-med: Training a large language-and-vision assistant for
+  biomedicine in one day, arXiv preprint arXiv:2306.00890 (2023).
+
+\bibitem{yan2025derm1m}
+S.~Yan, M.~Hu, Y.~Jiang, X.~Li, H.~Fei, P.~Tschandl, H.~Kittler, Z.~Ge, Derm1m:
+  A million-scale vision-language dataset aligned with clinical ontology
+  knowledge for dermatology, in: Proceedings of the IEEE/CVF International
+  Conference on Computer Vision, 2025, pp. 12681--12690.
+
+\bibitem{yan2025multimodal}
+S.~Yan, Z.~Yu, C.~Primiero, C.~Vico-Alonso, Z.~Wang, L.~Yang, P.~Tschandl,
+  M.~Hu, L.~Ju, G.~Tan, et~al., A multimodal vision foundation model for
+  clinical dermatology, Nature Medicine 31~(8) (2025) 2691--2702.
+
+\bibitem{hu2022lora}
+E.~J. Hu, Y.~Shen, P.~Wallis, Z.~Allen-Zhu, Y.~Li, S.~Wang, L.~Wang, W.~Chen,
+  et~al., Lora: Low-rank adaptation of large language models, ICLR 1~(2) (2022)
+  3.
+
+\bibitem{woo2018cbam}
+S.~Woo, J.~Park, J.-Y. Lee, I.~S. Kweon, Cbam: Convolutional block attention
+  module, in: Proceedings of the European Conference on Computer Vision (ECCV),
+  2018, pp. 3--19.
+
+\bibitem{lin2017focal}
+T.-Y. Lin, P.~Goyal, R.~Girshick, K.~He, P.~Doll{\'a}r, Focal loss for dense
+  object detection, in: Proceedings of the IEEE International Conference on
+  Computer Vision, 2017, pp. 2980--2988.
+
+\bibitem{vo2026explainability}
+T.~L. Vo, T.~Nguyen, L.~M. Lopez-Ramos, H.~L. Hammer, M.~A. Riegler,
+  P.~Halvorsen, Explainability of machine learning models under missing data,
+  Applied Soft Computing (2026) 115105.
+
+\bibitem{ryan2025does}
+P.~Ryan, B.~Ozturk, L.~Fearnley, T.~Lawton, I.~Habli, Does not impute!
+  performance and ethical implications of missing data for an ai-based diabetes
+  co-morbidity predictor, in: International Conference on Computer Safety,
+  Reliability, and Security, Springer, 2025, pp. 511--523.
+
+\bibitem{el2026moving}
+A.~El~Mir, E.~B. de~Sousa, I.~Mesina-Estarr{\'o}n, L.~A. Celi, M.~Hani,
+  M.~Benjelloun, N.~Nageswaran, S.~Mahmoudi, S.~Siddiqui, S.~Sadasivam, et~al.,
+  Moving beyond the empty cell: The threat of decontextualized healthcare data,
+  PLOS Digital Health 5~(1) (2026) e0001194.
+
+\end{thebibliography}
