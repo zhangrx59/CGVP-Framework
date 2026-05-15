@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.11.22)  13 MAY 2026 15:37
+This is XeTeX, Version 3.141592653-2.6-0.999997 (TeX Live 2025) (preloaded format=xelatex 2025.11.22)  15 MAY 2026 13:38
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -6,8 +6,8 @@ entering extended mode
 (./main.tex
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
-(./elsarticle.cls
-Document Class: elsarticle 2024/04/04, 3.4: Elsevier Ltd
+(c:/texlive/2025/texmf-dist/tex/latex/elsarticle/elsarticle.cls
+Document Class: elsarticle 2025/01/11, 3.4c: Elsevier Ltd
 (c:/texlive/2025/texmf-dist/tex/latex/base/fontenc.sty
 Package: fontenc 2021/04/29 v2.0v Standard LaTeX package
 LaTeX Font Info:    Trying to load font information for T1+lmr on input line 11
@@ -80,7 +80,7 @@ File: xetex.def 2022/09/22 v5.0n Graphics/color driver for xetex
 \c@fnote=\count271
 \c@cnote=\count272
 \c@ead=\count273
-\c@author=\count274
+\c@elsarticle@author=\count274
 \@eadauthor=\toks18
 \c@affn=\count275
 \absbox=\box53
@@ -339,18 +339,18 @@ LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 153.
 LaTeX Font Info:    ... okay on input line 153.
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: End \AtBeginDocument code.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 239
+LaTeX Font Info:    Trying to load font information for U+msa on input line 249
 .
  (c:/texlive/2025/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 239
+LaTeX Font Info:    Trying to load font information for U+msb on input line 249
 .
 
 (c:/texlive/2025/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for U+rsfs on input line 23
+LaTeX Font Info:    Trying to load font information for U+rsfs on input line 24
 9.
 
 (c:/texlive/2025/texmf-dist/tex/latex/jknapltx/ursfs.fd
@@ -361,24 +361,24 @@ File: ursfs.fd 1998/03/24 rsfs font definition file (jk)
 
 
 ]
-File: mel_1.jpg Graphic file (type bmp)
-<mel_1.jpg>
-File: mel_2.jpg Graphic file (type bmp)
-<mel_2.jpg>
-File: mel_3.jpg Graphic file (type bmp)
-<mel_3.jpg>
-File: mel_4.jpg Graphic file (type bmp)
-<mel_4.jpg>
-File: sim_mel.png Graphic file (type bmp)
-<sim_mel.png>
-File: sim_nev.png Graphic file (type bmp)
-<sim_nev.png>
-File: sim_sek.png Graphic file (type bmp)
-<sim_sek.png>
-File: sim_bcc.png Graphic file (type bmp)
-<sim_bcc.png>
+File: figure/mel_1.jpg Graphic file (type bmp)
+<figure/mel_1.jpg>
+File: figure/mel_2.jpg Graphic file (type bmp)
+<figure/mel_2.jpg>
+File: figure/mel_3.jpg Graphic file (type bmp)
+<figure/mel_3.jpg>
+File: figure/mel_4.jpg Graphic file (type bmp)
+<figure/mel_4.jpg>
+File: figure/sim_mel.png Graphic file (type bmp)
+<figure/sim_mel.png>
+File: figure/sim_nev.png Graphic file (type bmp)
+<figure/sim_nev.png>
+File: figure/sim_sek.png Graphic file (type bmp)
+<figure/sim_sek.png>
+File: figure/sim_bcc.png Graphic file (type bmp)
+<figure/sim_bcc.png>
 
-Overfull \hbox (18.96698pt too wide) in paragraph at lines 332--333
+Overfull \hbox (18.96698pt too wide) in paragraph at lines 342--343
 \T1/lmr/m/n/12 adapted vision-language mod-els to der-ma-tol-ogy through domain
 -specific datasets
  []
@@ -386,13 +386,13 @@ Overfull \hbox (18.96698pt too wide) in paragraph at lines 332--333
 
 
 [2]
-Overfull \hbox (0.86853pt too wide) in paragraph at lines 336--337
+Overfull \hbox (0.86853pt too wide) in paragraph at lines 346--347
 []\T1/lmr/m/n/12 To ad-dress these chal-lenges, we pro-pose CGVP-MedGemma, a co
 nfidence-
  []
 
 
-Overfull \hbox (1.52243pt too wide) in paragraph at lines 336--337
+Overfull \hbox (1.52243pt too wide) in paragraph at lines 346--347
 \T1/lmr/m/n/12 stead of treat-ing di-ag-no-sis as open-ended text gen-er-a-tion
 , CGVP-MedGemma
  []
@@ -404,15 +404,15 @@ Overfull \hbox (1.52243pt too wide) in paragraph at lines 336--337
 [4]
 
 [5]
-Overfull \hbox (1.62016pt too wide) in paragraph at lines 364--365
+Overfull \hbox (1.62016pt too wide) in paragraph at lines 374--375
 []\T1/lmr/m/n/12 In ad-di-tion to con-trastive pre-train-ing, instruction-follo
 wing med-i-cal VLMs
  []
 
-File: method.png Graphic file (type bmp)
-<method.png>
-File: method2.png Graphic file (type bmp)
-<method2.png>
+File: figure/method.png Graphic file (type bmp)
+<figure/method.png>
+File: figure/method2.png Graphic file (type bmp)
+<figure/method2.png>
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
 
@@ -423,7 +423,7 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 [7]
 
 [8]
-Overfull \hbox (2.84343pt too wide) in paragraph at lines 438--439
+Overfull \hbox (2.84343pt too wide) in paragraph at lines 448--449
 []\T1/lmr/m/n/12 The ra-tio-nale be-hind us-ing LoRA is that the adap-ta-tion f
 rom MedGemma-
  []
@@ -443,10 +443,10 @@ rom MedGemma-
 [14]
 
 [15]
-File: confusion matrx.png Graphic file (type bmp)
-<confusion matrx.png>
-File: confusion matrix2.png Graphic file (type bmp)
-<confusion matrix2.png>
+File: figure/confusion matrx.png Graphic file (type bmp)
+<figure/confusion matrx.png>
+File: figure/confusion matrix2.png Graphic file (type bmp)
+<figure/confusion matrix2.png>
 
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
@@ -456,8 +456,8 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 [16]
 
 [17]
-File: loss.png Graphic file (type bmp)
-<loss.png>
+File: figure/loss.png Graphic file (type bmp)
+<figure/loss.png>
 
 
 LaTeX Warning: `!h' float specifier changed to `!ht'.
@@ -465,25 +465,31 @@ LaTeX Warning: `!h' float specifier changed to `!ht'.
 
 
 [18]
-File: gradcam.png Graphic file (type bmp)
-<gradcam.png>
+File: figure/gradcam.png Graphic file (type bmp)
+<figure/gradcam.png>
+
+Overfull \hbox (0.39566pt too wide) in paragraph at lines 802--809
+[]\T1/lmr/m/n/12 Figure 5[] com-pares Grad-CAM at-ten-tion maps be-fore and af-
+ter confidence-
+ []
+
 
 
 [19]
-File: chaocanshu.png Graphic file (type bmp)
-<chaocanshu.png>
-File: chaocanshu2.png Graphic file (type bmp)
-<chaocanshu2.png>
+File: figure/chaocanshu.png Graphic file (type bmp)
+<figure/chaocanshu.png>
+File: figure/chaocanshu2.png Graphic file (type bmp)
+<figure/chaocanshu2.png>
 
 
 [20]
-Overfull \hbox (12.70107pt too wide) in paragraph at lines 828--829
+Overfull \hbox (12.70107pt too wide) in paragraph at lines 838--839
 \T1/lmr/m/n/12 notes and com-bined with le-sion im-ages un-der an instruction-f
 ollowing paradigm,
  []
 
 
-Overfull \hbox (1.08253pt too wide) in paragraph at lines 828--829
+Overfull \hbox (1.08253pt too wide) in paragraph at lines 838--839
 \T1/lmr/m/n/12 for-get-ting of med-i-cal vi-sual rep-re-sen-ta-tions. Third, a 
 frozen ResNet50-CBAM
  []
@@ -491,39 +497,43 @@ frozen ResNet50-CBAM
 
 
 [21]
-Overfull \hbox (79.13556pt too wide) in paragraph at lines 838--839
+Overfull \hbox (0.80241pt too wide) in paragraph at lines 848--850
 \T1/lmr/m/n/12 the Shen-zhen Fun-da-men-tal Re-search Pro-gram, China (Grant No
-. JCYJ20240813151301003). 
+. JCYJ20240 
  []
 
 
 
 [22] (./main.bbl
-Underfull \hbox (badness 3977) in paragraph at lines 48--52
+
+[23]
+Underfull \hbox (badness 3977) in paragraph at lines 64--68
 []\T1/lmr/m/n/12 M. Wat-son, T. Win-ter-bot-tom, T. Hud-son, B. Jones, H. P.
  []
 
 
 
-[23]
-
 [24]
 
-[25])
+[25]
 
-[26] (./main.aux)
+[26]
+
+[27])
+
+[28] (./main.aux)
  ***********
 LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 6134 strings out of 473831
- 95856 string characters out of 5733136
- 491767 words of memory out of 5000000
- 29096 multiletter control sequences out of 15000+600000
+ 6180 strings out of 473831
+ 98237 string characters out of 5733136
+ 491752 words of memory out of 5000000
+ 29136 multiletter control sequences out of 15000+600000
  614082 words of font info for 108 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  72i,19n,79p,1537b,514s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on main.pdf (26 pages).
+Output written on main.pdf (28 pages).

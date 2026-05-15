@@ -3,44 +3,47 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
 The style file: elsarticle-num.bst
 Database file #1: main.bib
-You've used 34 entries,
+Warning--empty pages in simonyan2014very
+Warning--empty booktitle in alayrac2022flamingo
+You've used 47 entries,
             2952 wiz_defined-function locations,
-            862 strings with 13730 characters,
-and the built_in function-call counts, 13254 in all, are:
-= -- 1134
-> -- 673
-< -- 13
-+ -- 247
-- -- 213
-* -- 928
-:= -- 1851
-add.period$ -- 34
-call.type$ -- 34
-change.case$ -- 34
+            933 strings with 17243 characters,
+and the built_in function-call counts, 19126 in all, are:
+= -- 1647
+> -- 942
+< -- 20
++ -- 345
+- -- 298
+* -- 1385
+:= -- 2619
+add.period$ -- 47
+call.type$ -- 47
+change.case$ -- 47
 chr.to.int$ -- 0
-cite$ -- 34
-duplicate$ -- 440
-empty$ -- 1364
-format.name$ -- 247
-if$ -- 3360
+cite$ -- 49
+duplicate$ -- 629
+empty$ -- 1976
+format.name$ -- 346
+if$ -- 4834
 int.to.chr$ -- 0
-int.to.str$ -- 34
-missing$ -- 34
-newline$ -- 110
-num.names$ -- 34
-pop$ -- 245
+int.to.str$ -- 47
+missing$ -- 47
+newline$ -- 149
+num.names$ -- 49
+pop$ -- 344
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
-skip$ -- 854
+skip$ -- 1206
 stack$ -- 0
-substring$ -- 752
-swap$ -- 150
-text.length$ -- 13
+substring$ -- 1223
+swap$ -- 219
+text.length$ -- 20
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
-warning$ -- 0
-while$ -- 93
-width$ -- 36
-write$ -- 292
+warning$ -- 2
+while$ -- 138
+width$ -- 49
+write$ -- 401
+(There were 2 warnings)

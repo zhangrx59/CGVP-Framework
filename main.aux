@@ -3,10 +3,11 @@
 \Newlabel{cor1}{1}
 \Newlabel{label1}{a}
 \Newlabel{label2}{b}
+\Newlabel{label3}{c}
 \citation{yu2017melanoma,hosny2022refined,wu2020skin}
-\citation{pacheco2020impact,khurshid2025multimodal}
+\citation{pacheco2020impact,khurshid2025multimodal,kawahara2019seven,gessert2020skin,ou2022deep}
 \citation{li2020fusing,pacheco2021attention,khurshid2024optimizing}
-\citation{watson2026multimodal}
+\citation{watson2026multimodal,geirhos2020shortcut,zech2018variable,oakdenrayner2020hidden}
 \citation{zhu2026concept,zeng2025mmskin}
 \citation{sellergren2025medgemma}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{2}{}\protected@file@percent }
@@ -21,11 +22,12 @@
 \citation{pacheco2020impact}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Related works}{4}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Skin lesion classification methods}{4}{}\protected@file@percent }
-\citation{pacheco2020impact}
+\citation{pacheco2020impact,kawahara2019seven,gessert2020skin,ou2022deep}
 \citation{li2020fusing}
 \citation{pacheco2021attention}
 \citation{khurshid2024optimizing}
 \citation{khurshid2025multimodal}
+\citation{alayrac2022flamingo,liu2023visual,tu2024towards}
 \citation{radford2021learning}
 \citation{wang2022medclip}
 \citation{zhang2023biomedclip}
@@ -49,7 +51,7 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Multimodal input construction}{8}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Parameter-efficient MVLM adaptation}{8}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}Backbone selection}{8}{}\protected@file@percent }
-\citation{hu2022lora}
+\citation{hu2022lora,houlsby2019parameter,lester2021power}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}Low-rank adaptation}{9}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.3}Closed-set classification head}{10}{}\protected@file@percent }
 \citation{woo2018cbam}
@@ -58,6 +60,7 @@
 \newlabel{eq:cls_loss}{{6}{11}{}{equation.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Confidence-gated visual prior consistency}{11}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}Visual prior branch architecture}{11}{}\protected@file@percent }
+\citation{hinton2015distilling}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}Confidence-gated consistency regularization}{12}{}\protected@file@percent }
 \newlabel{eq:gated_set}{{9}{12}{}{equation.9}{}}
 \newlabel{eq:kl_gated}{{10}{12}{}{equation.10}{}}
@@ -107,12 +110,13 @@
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Step-wise ablation of the training strategy on PAD-UFES-20.}}{18}{}\protected@file@percent }
 \newlabel{table4}{{4}{18}{}{table.4}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.2}Clinical metadata ablation}{18}{}\protected@file@percent }
+\citation{selvaraju2017gradcam}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Training and validation loss curves over 15 epochs on PAD-UFES-20. Training total loss $\mathcal  {L}$, classification loss $\mathcal  {L}_{cls}$, KL consistency loss $\mathcal  {L}_{KL}$, and validation total loss $\mathcal  {L}$ are shown.}}{19}{}\protected@file@percent }
 \newlabel{figure4}{{4}{19}{}{figure.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Performance of different metadata on PAD-UFES-20.}}{19}{}\protected@file@percent }
 \newlabel{table5}{{5}{19}{}{table.5}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.6.3}Qualitative analysis of visual attention}{20}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces GradCAM attention maps for representative samples from PAD-UFES-20. Row 1: original images. Row 2: attention before KL regularization. Row 3: attention after KL regularization.}}{20}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Grad-CAM attention maps for representative samples from PAD-UFES-20. Row 1: original images. Row 2: attention before KL regularization. Row 3: attention after KL regularization.}}{20}{}\protected@file@percent }
 \newlabel{figure5}{{5}{20}{}{figure.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Hyperparameter sensitivity analysis}{21}{}\protected@file@percent }
 \newlabel{fig:method3-a}{{6a}{21}{}{subfigure.6.1}{}}
@@ -129,34 +133,47 @@
 \bibcite{wu2020skin}{{3}{}{{}}{{}}}
 \bibcite{pacheco2020impact}{{4}{}{{}}{{}}}
 \bibcite{khurshid2025multimodal}{{5}{}{{}}{{}}}
-\bibcite{li2020fusing}{{6}{}{{}}{{}}}
-\bibcite{pacheco2021attention}{{7}{}{{}}{{}}}
-\bibcite{khurshid2024optimizing}{{8}{}{{}}{{}}}
-\bibcite{watson2026multimodal}{{9}{}{{}}{{}}}
-\bibcite{zhu2026concept}{{10}{}{{}}{{}}}
-\bibcite{zeng2025mmskin}{{11}{}{{}}{{}}}
-\bibcite{sellergren2025medgemma}{{12}{}{{}}{{}}}
-\bibcite{tschandl2018ham10000}{{13}{}{{}}{{}}}
-\bibcite{pacheco2020padufes20}{{14}{}{{}}{{}}}
-\bibcite{esteva2017dermatologist}{{15}{}{{}}{{}}}
-\bibcite{codella2019skin}{{16}{}{{}}{{}}}
-\bibcite{simonyan2014very}{{17}{}{{}}{{}}}
-\bibcite{he2016deep}{{18}{}{{}}{{}}}
-\bibcite{huang2017densely}{{19}{}{{}}{{}}}
-\bibcite{tan2019efficientnet}{{20}{}{{}}{{}}}
-\bibcite{sandler2018mobilenetv2}{{21}{}{{}}{{}}}
-\bibcite{brinker2019deep}{{22}{}{{}}{{}}}
-\bibcite{radford2021learning}{{23}{}{{}}{{}}}
-\bibcite{wang2022medclip}{{24}{}{{}}{{}}}
-\bibcite{zhang2023biomedclip}{{25}{}{{}}{{}}}
-\bibcite{li2023llavamed}{{26}{}{{}}{{}}}
-\bibcite{yan2025derm1m}{{27}{}{{}}{{}}}
-\bibcite{yan2025multimodal}{{28}{}{{}}{{}}}
-\bibcite{hu2022lora}{{29}{}{{}}{{}}}
-\bibcite{woo2018cbam}{{30}{}{{}}{{}}}
-\bibcite{lin2017focal}{{31}{}{{}}{{}}}
-\bibcite{vo2026explainability}{{32}{}{{}}{{}}}
-\bibcite{ryan2025does}{{33}{}{{}}{{}}}
-\bibcite{el2026moving}{{34}{}{{}}{{}}}
+\bibcite{kawahara2019seven}{{6}{}{{}}{{}}}
+\bibcite{gessert2020skin}{{7}{}{{}}{{}}}
+\bibcite{ou2022deep}{{8}{}{{}}{{}}}
+\bibcite{li2020fusing}{{9}{}{{}}{{}}}
+\bibcite{pacheco2021attention}{{10}{}{{}}{{}}}
+\bibcite{khurshid2024optimizing}{{11}{}{{}}{{}}}
+\bibcite{watson2026multimodal}{{12}{}{{}}{{}}}
+\bibcite{geirhos2020shortcut}{{13}{}{{}}{{}}}
+\bibcite{zech2018variable}{{14}{}{{}}{{}}}
+\bibcite{oakdenrayner2020hidden}{{15}{}{{}}{{}}}
+\bibcite{zhu2026concept}{{16}{}{{}}{{}}}
+\bibcite{zeng2025mmskin}{{17}{}{{}}{{}}}
+\bibcite{sellergren2025medgemma}{{18}{}{{}}{{}}}
+\bibcite{tschandl2018ham10000}{{19}{}{{}}{{}}}
+\bibcite{pacheco2020padufes20}{{20}{}{{}}{{}}}
+\bibcite{esteva2017dermatologist}{{21}{}{{}}{{}}}
+\bibcite{codella2019skin}{{22}{}{{}}{{}}}
+\bibcite{simonyan2014very}{{23}{}{{}}{{}}}
+\bibcite{he2016deep}{{24}{}{{}}{{}}}
+\bibcite{huang2017densely}{{25}{}{{}}{{}}}
+\bibcite{tan2019efficientnet}{{26}{}{{}}{{}}}
+\bibcite{sandler2018mobilenetv2}{{27}{}{{}}{{}}}
+\bibcite{brinker2019deep}{{28}{}{{}}{{}}}
+\bibcite{alayrac2022flamingo}{{29}{}{{}}{{}}}
+\bibcite{liu2023visual}{{30}{}{{}}{{}}}
+\bibcite{tu2024towards}{{31}{}{{}}{{}}}
+\bibcite{radford2021learning}{{32}{}{{}}{{}}}
+\bibcite{wang2022medclip}{{33}{}{{}}{{}}}
+\bibcite{zhang2023biomedclip}{{34}{}{{}}{{}}}
+\bibcite{li2023llavamed}{{35}{}{{}}{{}}}
+\bibcite{yan2025derm1m}{{36}{}{{}}{{}}}
+\bibcite{yan2025multimodal}{{37}{}{{}}{{}}}
+\bibcite{hu2022lora}{{38}{}{{}}{{}}}
+\bibcite{houlsby2019parameter}{{39}{}{{}}{{}}}
+\bibcite{lester2021power}{{40}{}{{}}{{}}}
+\bibcite{woo2018cbam}{{41}{}{{}}{{}}}
+\bibcite{lin2017focal}{{42}{}{{}}{{}}}
+\bibcite{hinton2015distilling}{{43}{}{{}}{{}}}
+\bibcite{vo2026explainability}{{44}{}{{}}{{}}}
+\bibcite{ryan2025does}{{45}{}{{}}{{}}}
+\bibcite{el2026moving}{{46}{}{{}}{{}}}
+\bibcite{selvaraju2017gradcam}{{47}{}{{}}{{}}}
 \providecommand\NAT@force@numbers{}\NAT@force@numbers
-\gdef \@abspage@last{26}
+\gdef \@abspage@last{28}

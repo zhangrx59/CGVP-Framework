@@ -179,7 +179,7 @@
 %%             country={}}
 %% \fntext[label3]{}
 
-\title{CGVP-MedGemma: A Confidence-Gated Visual Prior Consistency Framework for Multimodal Skin Lesion Classification}
+\title{CGVP-MedGemma: A Classification Framework Based on a Medical Large Vision-Language Model with Confidence Gating and Visual Prior Guidance for Skin Lesion Diagnosis}
 
 %% use optional labels to link authors explicitly to addresses:
 %% \author[label1,label2]{}
@@ -202,17 +202,27 @@
 \author[label1]{Chen Xiong\corref{cor1}}
 \ead{xiongch8@mail.sysu.edu.cn}
 \cortext[cor1]{Corresponding author}
+\author[label3]{Bo Chen\corref{cor1}}
+
 
 %% Author affiliation
-\affiliation[label1]{organization={Sun Yat-sen University},
-            addressline={School of Intelligent Systems Engineering},
-            city={Shenzhen},
-            postcode={518000},
-            country={China}}
+\affiliation[label1]
+{
+addressline={School of Intelligent Systems Engineering},
+organization={Sun Yat-sen University, Shenzhen campus},
+city={Shenzhen},
+postcode={518107},
+country={China}}
+
 \affiliation[label2]{organization={Nanjing Marine Radar Research Institute},
-            city={Nanjing},
-            postcode={210000},
-            country={China}}
+city={Nanjing},
+postcode={211153},
+country={China}}
+
+\affiliation[label3]{organization={Department of Reproductive Center, The Affiliated Dongguan Songshan Lake Central Hospital, Guangdong Medical University},
+	city={Dongguan},
+	postcode={523326},
+	country={China}}
 
 %% Abstract
 \begin{abstract}
@@ -293,10 +303,10 @@ Deep learning has significantly advanced automatic skin lesion classification. C
 	\renewcommand{\arraystretch}{0.95}
 	
 	\begin{tabular}{cccc}
-		\includegraphics[width=0.23\linewidth]{mel_1.jpg} &
-		\includegraphics[width=0.23\linewidth]{mel_2.jpg} &
-		\includegraphics[width=0.23\linewidth]{mel_3.jpg} &
-		\includegraphics[width=0.23\linewidth]{mel_4.jpg} \\[-1pt]
+		\includegraphics[width=0.23\linewidth]{figure/mel_1.jpg} &
+		\includegraphics[width=0.23\linewidth]{figure/mel_2.jpg} &
+		\includegraphics[width=0.23\linewidth]{figure/mel_3.jpg} &
+		\includegraphics[width=0.23\linewidth]{figure/mel_4.jpg} \\[-1pt]
 		
 %		{\scriptsize MEL} &
 %		{\scriptsize MEL} &
@@ -305,10 +315,10 @@ Deep learning has significantly advanced automatic skin lesion classification. C
 		
 		\multicolumn{4}{c}{(a)} \\[10pt]  % 子标签移到图片下方
 		
-		\includegraphics[width=0.23\linewidth]{sim_mel.png} &
-		\includegraphics[width=0.23\linewidth]{sim_nev.png} &
-		\includegraphics[width=0.23\linewidth]{sim_sek.png} &
-		\includegraphics[width=0.23\linewidth]{sim_bcc.png} \\[-1pt]
+		\includegraphics[width=0.23\linewidth]{figure/sim_mel.png} &
+		\includegraphics[width=0.23\linewidth]{figure/sim_nev.png} &
+		\includegraphics[width=0.23\linewidth]{figure/sim_sek.png} &
+		\includegraphics[width=0.23\linewidth]{figure/sim_bcc.png} \\[-1pt]
 		
 %		{\scriptsize MEL} &
 %		{\scriptsize NEV} &
@@ -323,7 +333,7 @@ Deep learning has significantly advanced automatic skin lesion classification. C
 \end{figure}
 
 
-To address the above limitations, recent studies have introduced clinical metadata into skin lesion classification, showing that imaging data and clinical metadata are complementary when properly fused \cite{pacheco2020impact, khurshid2025multimodal}. Existing fusion methods usually encode metadata as tabular vectors and combine them with visual features through concatenation, feature modulation, or auxiliary-task learning \cite{li2020fusing,pacheco2021attention,khurshid2024optimizing}. Although effective, these task-specific architectures often lack the semantic modeling and transfer ability of medical vision-language models (MVLMs). Moreover, when metadata attributes are strongly correlated with labels, multimodal models may over-rely on textual or tabular cues and ignore essential visual evidence, leading to shortcut learning and unstable predictions \cite{watson2026multimodal}.
+To address the above limitations, recent studies have introduced clinical metadata into skin lesion classification, showing that imaging data and clinical metadata are complementary when properly fused \cite{pacheco2020impact, khurshid2025multimodal,kawahara2019seven, gessert2020skin, ou2022deep}. Existing fusion methods usually encode metadata as tabular vectors and combine them with visual features through concatenation, feature modulation, or auxiliary-task learning \cite{li2020fusing,pacheco2021attention,khurshid2024optimizing}. Although effective, these task-specific architectures often lack the semantic modeling and transfer ability of medical vision-language models (MVLMs). Moreover, when metadata attributes are strongly correlated with labels, multimodal models may over-rely on textual or tabular cues and ignore essential visual evidence, leading to shortcut learning and unstable predictions \cite{watson2026multimodal,geirhos2020shortcut, zech2018variable, oakdenrayner2020hidden}.
 
 
 
@@ -351,14 +361,14 @@ Early studies treated skin lesion classification as an image classification prob
 To overcome the limitations of vision-only models, clinical metadata have been explored as an additional information source for skin lesion diagnosis. Such metadata attributes offer complementary diagnostic cues, especially when visual patterns are ambiguous. Pacheco et al.~demonstrated that incorporating patient clinical information improves automated skin cancer detection, underscoring the value of combining lesion images with structured metadata and spurring the development of multimodal fusion methods for dermatology, where metadata is introduced as auxiliary information to enhance vision-based classification~\cite{pacheco2020impact}. 
 
 
-Existing metadata fusion methods can be grouped into several categories. The simplest method is concatenation, which directly combines image features with encoded metadata features before classification~\cite{pacheco2020impact}. More advanced methods attempt to use metadata to guide or modulate visual representations. For example, MetaNet fuses dermoscopic images and metadata by learning metadata-aware feature representations~\cite{li2020fusing}, while MetaBlock introduces an attention-based mechanism to combine image features and patient information more effectively~\cite{pacheco2021attention}. AuxNet improves multimodal skin lesion classification through auxiliary task learning~\cite{khurshid2024optimizing}. DualRefNet further enhances performance via a dual-stage feature refinement strategy~\cite{khurshid2025multimodal}. These methods demonstrate that clinical metadata can consistently benefit skin lesion classification when properly integrated with visual features.
+Existing metadata fusion methods can be grouped into several categories. The simplest method is concatenation, which directly combines image features with encoded metadata features before classification~\cite{pacheco2020impact, kawahara2019seven, gessert2020skin, ou2022deep}. More advanced methods attempt to use metadata to guide or modulate visual representations. For example, MetaNet fuses dermoscopic images and metadata by learning metadata-aware feature representations~\cite{li2020fusing}, while MetaBlock introduces an attention-based mechanism to combine image features and patient information more effectively~\cite{pacheco2021attention}. AuxNet improves multimodal skin lesion classification through auxiliary task learning~\cite{khurshid2024optimizing}. DualRefNet further enhances performance via a dual-stage feature refinement strategy~\cite{khurshid2025multimodal}. These methods demonstrate that clinical metadata can consistently benefit skin lesion classification when properly integrated with visual features.
 
 However, most existing fusion methods represent metadata as fixed tabular vectors and integrate them through task-specific network modules. Such designs may have limited ability to exploit the semantic structure of clinical descriptions and are less flexible than language-based multimodal modeling. More importantly, when certain metadata attributes are highly correlated with specific diagnostic labels, multimodal models may over-rely on non-visual cues and neglect critical visual evidence from lesion images. 
 
 
 \subsection{MVLM-based methods}
 
-Vision-language models (VLMs) have recently become an important direction in medical image analysis because they can jointly process visual inputs and textual information within a unified representation space. General image-text pretraining methods, such as CLIP, have shown that contrastive learning on large-scale image-text pairs can produce transferable multimodal representations~\cite{radford2021learning}. Inspired by this line of work, several MVLMs have been proposed for clinical image understanding. MedCLIP adapts contrastive vision-language learning to medical images and reports, aiming to learn medical image-text representations with improved data efficiency~\cite{wang2022medclip}. BiomedCLIP further extends biomedical vision-language pretraining by using large-scale biomedical image-text pairs collected from scientific literature~\cite{zhang2023biomedclip}. These studies establish transferable multimodal representations that lay the groundwork for applying vision-language learning to medical image analysis.
+Vision-language models (VLMs) have recently become an important direction in medical image analysis because they can jointly process visual inputs and textual information within a unified representation space~\cite{alayrac2022flamingo, liu2023visual, tu2024towards}. General image-text pretraining methods, such as CLIP, have shown that contrastive learning on large-scale image-text pairs can produce transferable multimodal representations~\cite{radford2021learning}. Inspired by this line of work, several MVLMs have been proposed for clinical image understanding. MedCLIP adapts contrastive vision-language learning to medical images and reports, aiming to learn medical image-text representations with improved data efficiency~\cite{wang2022medclip}. BiomedCLIP further extends biomedical vision-language pretraining by using large-scale biomedical image-text pairs collected from scientific literature~\cite{zhang2023biomedclip}. These studies establish transferable multimodal representations that lay the groundwork for applying vision-language learning to medical image analysis.
 
 
 In addition to contrastive pretraining, instruction-following medical VLMs have also been explored. LLaVA-Med extends multimodal instruction tuning to biomedical scenarios and enables open-ended medical visual question answering and vision-based dialogue~\cite{li2023llavamed}. MedGemma is a more recent MVLM specially designed for downstream clinical tasks, offering strong multimodal representations suitable for medical image analysis~\cite{sellergren2025medgemma}. In dermatology, several studies have focused on constructing domain-specific image-text resources and adapting VLMs to skin lesion analysis. MM-Skin improves dermatology vision-language modeling using image-text data derived from textbooks~\cite{zeng2025mmskin}. Derm1M builds a large-scale dermatology image-text dataset aligned with clinical ontology knowledge and supports dermatology-oriented vision-language representation learning~\cite{yan2025derm1m}. SkinVL explores multimodal foundation modeling for clinical dermatology and has been evaluated on dermatological image understanding tasks~\cite{yan2025multimodal}. 
@@ -390,7 +400,7 @@ Despite these advances, directly applying generative MVLMs to closed-set skin le
 	\centering
 	\begin{subfigure}[b]{1.0\linewidth}
 		\centering
-		\includegraphics[width=\linewidth]{method}
+		\includegraphics[width=\linewidth]{figure/method}
 		\caption{}
 		\label{fig:cgvp-medgemma-a}
 	\end{subfigure}
@@ -399,7 +409,7 @@ Despite these advances, directly applying generative MVLMs to closed-set skin le
 	
 	\begin{subfigure}[b]{1.0\linewidth}
 		\centering
-		\includegraphics[width=\linewidth]{method2}
+		\includegraphics[width=\linewidth]{figure/method2}
 		\caption{}
 		\label{fig:cgvp-medgemma-b}
 	\end{subfigure}
@@ -432,7 +442,7 @@ The instruction-tuned variant (-IT) is selected over the base model due to its s
 
 \subsubsection{Low-rank adaptation}
 Full fine-tuning of a 4B model on small-scale clinical datasets is computationally prohibitive and prone to catastrophic forgetting of pretrained representations. 
-Therefore, we adopt LoRA, which injects trainable low-rank decomposition matrices into the attention projection layers and feed-forward projections of the transformer~\cite{hu2022lora}. 
+Therefore, we adopt LoRA, which injects trainable low-rank decomposition matrices into the attention projection layers and feed-forward projections of the transformer~\cite{hu2022lora,houlsby2019parameter, lester2021power}. 
 
 
 The rationale behind using LoRA is that the adaptation from MedGemma-4B-IT to skin lesion classification does not require relearning the entire medical vision-language representation space. Since the backbone has already encoded general medical multimodal knowledge, the downstream task mainly requires a task-specific residual update that adjusts the association among lesion images, serialized clinical metadata, and predefined diagnostic labels. Let $W_0$ denote a pretrained weight matrix and $W^*$ denote the ideal weight. The full fine-tuning update can be expressed as:
@@ -450,7 +460,7 @@ h' = W_{0}h
 =
 \left(
 W_{0}+\frac{\alpha}{r}BA
-\right)h.
+\right)h
 \end{equation}
 where $h$ is the input hidden representation and $\alpha$ is the LoRA scaling factor. This means that LoRA preserves the pretrained weight $W_0$ while learning a compact task-specific correction. For the attention module, LoRA changes the effective query, key and value projections as follows:
 \begin{equation}
@@ -513,7 +523,7 @@ With the frozen visual prior providing a reliable vision-based reference, we int
 	\mathcal{G} = \{\, i \mid \max_{y \in \mathcal{Y}} p_r(y \mid x_i) > \tau \,\},
 	\label{eq:gated_set}
 \end{equation}
-where $\tau$ is a confidence threshold. For samples in $\mathcal{G}$, the frozen visual prior is treated as a soft teacher distribution, and a KL divergence penalty is imposed to align the multimodal prediction $p_\theta(y \mid x_i,c_i)$ with the frozen visual reference $p_r(y \mid x_i)$:
+where $\tau$ is a confidence threshold. For samples in $\mathcal{G}$, the frozen visual prior is treated as a soft teacher distribution~\cite{hinton2015distilling}, and a KL divergence penalty is imposed to align the multimodal prediction $p_\theta(y \mid x_i,c_i)$ with the frozen visual reference $p_r(y \mid x_i)$:
 \begin{equation}
 	\mathcal{L}_{\mathrm{KL}} =
 	\frac{1}{|\mathcal{G}| + \epsilon}
@@ -551,7 +561,7 @@ where $\lambda$ controls the relative strength of visual consistency regularizat
 \subsection{Datasets}
 
 
-We evaluate the proposed framework on PAD-UFES-20 and HAM10000 \cite{tschandl2018ham10000,pacheco2020padufes20}. The class distribution of the datasets are shown in Table~\ref{table1}.
+We evaluate the proposed framework on PAD-UFES-20 and HAM10000 \cite{tschandl2018ham10000,pacheco2020padufes20}. The class distribution of two datasets are shown in Table~\ref{table1}.
 \begin{table*}[!htbp]
 	\centering
 	\renewcommand{\arraystretch}{1.15}
@@ -714,14 +724,14 @@ On HAM10000, our method achieves an ACC of 0.787 and a BACC of 0.661, which is c
 	\centering
 	\begin{subfigure}[b]{0.48\linewidth}
 		\centering
-		\includegraphics[width=\linewidth]{confusion matrx.png}
+		\includegraphics[width=\linewidth]{figure/confusion matrx.png}
 		\caption{}
 		\label{fig:confusion-matrx-pad}
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}[b]{0.48\linewidth}
 		\centering
-		\includegraphics[width=\linewidth]{confusion matrix2.png}
+		\includegraphics[width=\linewidth]{figure/confusion matrix2.png}
 		\caption{}
 		\label{fig:confusion-matrx-ham}
 	\end{subfigure}
@@ -730,7 +740,7 @@ On HAM10000, our method achieves an ACC of 0.787 and a BACC of 0.661, which is c
 	\label{confusion matrix}
 \end{figure}
 
-Figure~\ref{confusion matrix} presents confusion matrices analyzing per-class predictions. On PAD-UFES-20, the model achieves strong recall for ACK (0.800), BCC (0.803), NEV (0.973), and SEK (0.917). MEL attains a recall of 0.750, demonstrating the effectiveness of visual prior guidance for under-represented classes. SCC shows the lowest recall (0.414), mainly confused with ACK and BCC(a clinically justified pattern). On HAM10000, NEV recall is 0.858, with dominant MEL-NEV confusion reflecting dermoscopic similarity. ACK (0.551) and BCC (0.597) exhibit mutual confusion, while SEK (0.648) is mainly misclassified as NEV or ACK. The scarcity of rich textual metadata in HAM10000 limits the model's ability to disambiguate these visually similar lesion pairs; richer visual priors or domain-specific pretraining may benefit minority classes.
+Figure~\ref{confusion matrix} presents confusion matrices analyzing per-class predictions. On PAD-UFES-20, the model achieves strong recall for ACK (0.800), BCC (0.803), NEV (0.973), and SEK (0.917). MEL attains a recall of 0.750, demonstrating the effectiveness of visual prior guidance for underrepresented classes. SCC shows the lowest recall (0.414), mainly confused with ACK and BCC(a clinically justified pattern). On HAM10000, NEV recall is 0.858, with dominant MEL-NEV confusion reflecting dermoscopic similarity. ACK (0.551) and BCC (0.597) exhibit mutual confusion, while SEK (0.648) is mainly misclassified as NEV or ACK. The scarcity of rich textual metadata in HAM10000 limits the model's ability to disambiguate these visually similar lesion pairs; richer visual priors or domain-specific pretraining may benefit minority classes.
 
  
 \subsection{Ablation studies}
@@ -760,7 +770,7 @@ The base MedGemma-4B-IT performs poorly, confirming that directly applying a gen
 
 \begin{figure}[!h]
 	\centering
-	\includegraphics[width=1.0\linewidth]{loss}
+	\includegraphics[width=1.0\linewidth]{figure/loss}
 	\caption{Training and validation loss curves over 15 epochs on PAD-UFES-20. Training total loss $\mathcal{L}$, classification loss $\mathcal{L}_{cls}$, KL consistency loss $\mathcal{L}_{KL}$, and validation total loss $\mathcal{L}$ are shown.}
 	\label{figure4}
 \end{figure}
@@ -789,11 +799,11 @@ Performance improves consistently as richer clinical metadata are provided, with
 
 
 \subsubsection{Qualitative analysis of visual attention}
-Figure~\ref{figure5} compares GradCAM attention maps before and after confidence-gated visual prior regularization for four samples. Without the visual consistency constraint, the attention responses are relatively diffuse and partly extend to background regions. After regularization, the activated regions become more concentrated around lesion boundaries and surface texture patterns. This change indicates that the proposed visual prior consistency term encourages the multimodal branch to rely more strongly on lesion-relevant visual evidence, providing complementary evidence to the metadata ablation results.
+Figure~\ref{figure5} compares Grad-CAM attention maps before and after confidence-gated visual prior regularization for four samples~\cite{selvaraju2017gradcam}. Without the visual consistency constraint, the attention responses are relatively diffuse and partly extend to background regions. After regularization, the activated regions become more concentrated around lesion boundaries and surface texture patterns. This change indicates that the proposed visual prior consistency term encourages the multimodal branch to rely more strongly on lesion-relevant visual evidence, providing complementary evidence to the metadata ablation results.
 \begin{figure}[!h]
 	\centering
-	\includegraphics[width=1.0\linewidth]{gradcam}
-	\caption{GradCAM attention maps for representative samples from PAD-UFES-20. Row 1: original images. Row 2: attention before KL regularization. Row 3: attention after KL regularization.}
+	\includegraphics[width=1.0\linewidth]{figure/gradcam}
+	\caption{Grad-CAM attention maps for representative samples from PAD-UFES-20. Row 1: original images. Row 2: attention before KL regularization. Row 3: attention after KL regularization.}
 	\label{figure5}
 \end{figure}
 
@@ -805,14 +815,14 @@ Figure~\ref{figure3} reports ACC and BACC across a grid of $\lambda \in [0.00,0.
 	
 	\begin{subfigure}[b]{0.48\linewidth}
 		\centering
-		\includegraphics[width=\linewidth]{chaocanshu.png}
+		\includegraphics[width=\linewidth]{figure/chaocanshu.png}
 		\caption{}
 		\label{fig:method3-a}
 	\end{subfigure}
 	\hfill
 	\begin{subfigure}[b]{0.48\linewidth}
 		\centering
-		\includegraphics[width=\linewidth]{chaocanshu2.png}
+		\includegraphics[width=\linewidth]{figure/chaocanshu2.png}
 		\caption{}
 		\label{fig:method3-b}
 	\end{subfigure}
@@ -831,11 +841,12 @@ To tackle these challenges, we introduced three complementary components. First,
 Experiments on PAD-UFES-20 and HAM10000 demonstrate that each component contributes incrementally to the final performance, with the proposed framework achieving competitive results against representative VLM and multimodal fusion baselines. Future work may explore leveraging the generative capacity of the VLM backbone to produce free-text diagnostic rationales alongside classification outputs, further enhancing clinical interpretability.
 
 \section*{CRediT authorship contribution statement}
-Ruixi Zhang: Writing --- original draft, Methodology, Visualization, Validation, Software. Dejun Zhang: Investigation, Conceptualization, Data curation. Chen Xiong: Review \& editing, Supervision, Resources, Project administration, Funding acquisition.
+Ruixi Zhang: Writing --- original draft, Methodology, Visualization, Validation, Software. Dejun Zhang: Investigation, Conceptualization, Data curation. Chen Xiong: Review \& editing, Supervision, Resources, Project administration, Funding acquisition. Bo Chen: Investigation, Data curation.
 
 \section*{Funding}
 
-This work was supported by the National Key Research and Development Program of China (Grant No. 2024YFB4303400), the Natural Science Foundation of Guangdong Province, China (Grant No. 2025A1515010166), and the Shenzhen Fundamental Research Program, China (Grant No. JCYJ20240813151301003).
+This work was supported by the National Key Research and Development Program of China (Grant No. 2024YFB4303400), the Natural Science Foundation of Guangdong Province, China (Grant No. 2025A1515010166), and the Shenzhen Fundamental Research Program, China (Grant No. JCYJ20240\\
+813151301003).
 
 \section*{Declaration of competing interest}
 The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.

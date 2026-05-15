@@ -7,8 +7,8 @@
 
 \bibitem{yu2017melanoma}
 L.~Yu, H.~Chen, Q.~Dou, J.~Qin, P.-A. Heng, Automated melanoma recognition in
-  dermoscopy images via very deep residual networks, IEEE Transactions on
-  Medical Imaging 36~(4) (2016) 994--1004.
+  dermoscopy images via very deep residual networks, IEEE transactions on
+  medical imaging 36~(4) (2016) 994--1004.
 
 \bibitem{hosny2022refined}
 K.~M. Hosny, M.~A. Kassem, Refined residual deep convolutional network for skin
@@ -21,23 +21,39 @@ J.~Wu, W.~Hu, Y.~Wen, W.~Tu, X.~Liu, Skin lesion classification using densely
 
 \bibitem{pacheco2020impact}
 A.~G. Pacheco, R.~A. Krohling, The impact of patient clinical information on
-  automated skin cancer detection, Computers in Biology and Medicine 116 (2020)
+  automated skin cancer detection, Computers in biology and medicine 116 (2020)
   103545.
 
 \bibitem{khurshid2025multimodal}
 M.~Khurshid, R.~Singh, M.~Vatsa, Multimodal dual-stage feature refinement for
   robust skin lesion classification, Scientific Reports 15~(1) (2025) 37775.
 
+\bibitem{kawahara2019seven}
+J.~Kawahara, S.~Daneshvar, G.~Argenziano, G.~Hamarneh, Seven-point checklist
+  and skin lesion classification using multitask multimodal neural nets, IEEE
+  journal of biomedical and health informatics 23~(2) (2018) 538--546.
+
+\bibitem{gessert2020skin}
+N.~Gessert, M.~Nielsen, M.~Shaikh, R.~Werner, A.~Schlaefer, Skin lesion
+  classification using ensembles of multi-resolution efficientnets with meta
+  data, MethodsX 7 (2020) 100864.
+
+\bibitem{ou2022deep}
+C.~Ou, S.~Zhou, R.~Yang, W.~Jiang, H.~He, W.~Gan, W.~Chen, X.~Qin, W.~Luo,
+  X.~Pi, et~al., A deep learning based multimodal fusion model for skin lesion
+  diagnosis using smartphone collected clinical images and metadata, Frontiers
+  in Surgery 9 (2022) 1029991.
+
 \bibitem{li2020fusing}
 W.~Li, J.~Zhuang, R.~Wang, J.~Zhang, W.-S. Zheng, Fusing metadata and
   dermoscopy images for skin disease diagnosis, in: 2020 IEEE 17th
-  International Symposium on Biomedical Imaging (ISBI), IEEE, 2020, pp.
+  international symposium on biomedical imaging (ISBI), IEEE, 2020, pp.
   1996--2000.
 
 \bibitem{pacheco2021attention}
 A.~G. Pacheco, R.~A. Krohling, An attention-based mechanism to combine images
   and metadata in deep learning models applied to skin cancer classification,
-  IEEE Journal of Biomedical and Health Informatics 25~(9) (2021) 3554--3563.
+  IEEE journal of biomedical and health informatics 25~(9) (2021) 3554--3563.
 
 \bibitem{khurshid2024optimizing}
 M.~Khurshid, M.~Vatsa, R.~Singh, Optimizing skin lesion classification via
@@ -50,11 +66,28 @@ M.~Watson, T.~Winterbottom, T.~Hudson, B.~Jones, H.~P. Shum,
   Multimodal models for skin cancer classification using clinical freetext and
   dermatoscopic images, Communications Medicine (2026).
 
+\bibitem{geirhos2020shortcut}
+R.~Geirhos, J.-H. Jacobsen, C.~Michaelis, R.~Zemel, W.~Brendel, M.~Bethge,
+  F.~A. Wichmann, Shortcut learning in deep neural networks, Nature Machine
+  Intelligence 2~(11) (2020) 665--673.
+
+\bibitem{zech2018variable}
+J.~R. Zech, M.~A. Badgeley, M.~Liu, A.~B. Costa, J.~J. Titano, E.~K. Oermann,
+  Variable generalization performance of a deep learning model to detect
+  pneumonia in chest radiographs: a cross-sectional study, PLoS medicine
+  15~(11) (2018) e1002683.
+
+\bibitem{oakdenrayner2020hidden}
+L.~Oakden-Rayner, J.~Dunnmon, G.~Carneiro, C.~R{\'e}, Hidden stratification
+  causes clinically meaningful failures in machine learning for medical
+  imaging, in: Proceedings of the ACM conference on health, inference, and
+  learning, 2020, pp. 151--159.
+
 \bibitem{zhu2026concept}
 Y.~Zhu, X.~Wang, X.~Huang, M.~Xia, P.~Mu, H.~Hu, X.~Zhang, Enhancing the
   interpretation of skin lesion diagnosis: Concept adaptive fine-tuning of
   vision-language models, IEEE Journal of Biomedical and Health Informatics
-  (2025).
+  30~(3) (2026) 2010--2022.
 
 \bibitem{zeng2025mmskin}
 W.~Zeng, Y.~Sun, C.~Ma, W.~Tan, B.~Yan, Mm-skin: Enhancing dermatology
@@ -64,19 +97,19 @@ W.~Zeng, Y.~Sun, C.~Ma, W.~Tan, B.~Yan, Mm-skin: Enhancing dermatology
 
 \bibitem{sellergren2025medgemma}
 A.~Sellergren, S.~Kazemzadeh, T.~Jaroensri, A.~Kiraly, M.~Traverse,
-  T.~Kohlberger, S.~Xu, F.~Jamil, C.~Hughes, C.~Lau, et~al., Medgemma technical
-  report, arXiv preprint arXiv:2507.05201 (2025).
+  T.~Kohlberger, S.~Xu, F.~Jamil, C.~Hughes, C.~Lau, et~al., {Medgemma}
+  technical report, arXiv preprint arXiv:2507.05201 (2025).
 
 \bibitem{tschandl2018ham10000}
-P.~Tschandl, C.~Rosendahl, H.~Kittler, The ham10000 dataset, a large collection
-  of multi-source dermatoscopic images of common pigmented skin lesions,
-  Scientific Data 5~(1) (2018) 180161.
+P.~Tschandl, C.~Rosendahl, H.~Kittler, The {HAM10000} dataset, a large
+  collection of multi-source dermatoscopic images of common pigmented skin
+  lesions, Scientific data 5~(1) (2018) 180161.
 
 \bibitem{pacheco2020padufes20}
 A.~G. Pacheco, G.~R. Lima, A.~S. Salomao, B.~Krohling, I.~P. Biral, G.~G.
   De~Angelo, F.~C. Alves~Jr, J.~G. Esgario, A.~C. Simora, P.~B. Castro, et~al.,
-  Pad-ufes-20: A skin lesion dataset composed of patient data and clinical
-  images collected from smartphones, Data in Brief 32 (2020) 106221.
+  {PAD-UFES-20}: A skin lesion dataset composed of patient data and clinical
+  images collected from smartphones, Data in brief 32 (2020) 106221.
 
 \bibitem{esteva2017dermatologist}
 A.~Esteva, B.~Kuprel, R.~A. Novoa, J.~Ko, S.~M. Swetter, H.~M. Blau, S.~Thrun,
@@ -84,34 +117,39 @@ A.~Esteva, B.~Kuprel, R.~A. Novoa, J.~Ko, S.~M. Swetter, H.~M. Blau, S.~Thrun,
   nature 542~(7639) (2017) 115--118.
 
 \bibitem{codella2019skin}
-N.~Codella, V.~Rotemberg, P.~Tschandl, M.~E. Celebi, S.~Dusza, D.~Gutman,
-  B.~Helba, A.~Kalloo, K.~Liopyris, M.~Marchetti, et~al., Skin lesion analysis
-  toward melanoma detection 2018: A challenge hosted by the international skin
-  imaging collaboration (isic), arXiv preprint arXiv:1902.03368 (2019).
+N.~C.~F. Codella, D.~A. Gutman, M.~E. Celebi, B.~Helba, M.~A. Marchetti, S.~W.
+  Dusza, A.~Kalloo, K.~Liopyris, N.~K. Mishra, H.~Kittler, A.~Halpern, Skin
+  lesion analysis toward melanoma detection: {A} challenge at the 2017
+  international symposium on biomedical imaging (isbi), hosted by the
+  international skin imaging collaboration {(ISIC)}, in: 15th {IEEE}
+  International Symposium on Biomedical Imaging, {ISBI} 2018, Washington, DC,
+  USA, April 4-7, 2018, {IEEE}, 2018, pp. 168--172.
 
 \bibitem{simonyan2014very}
 K.~Simonyan, A.~Zisserman, Very deep convolutional networks for large-scale
-  image recognition, arXiv preprint arXiv:1409.1556 (2014).
+  image recognition, in: Y.~Bengio, Y.~LeCun (Eds.), 3rd International
+  Conference on Learning Representations, {ICLR} 2015, San Diego, CA, USA, May
+  7-9, 2015, Conference Track Proceedings, 2015.
 
 \bibitem{he2016deep}
 K.~He, X.~Zhang, S.~Ren, J.~Sun, Deep residual learning for image recognition,
-  in: Proceedings of the IEEE Conference on Computer Vision and Pattern
-  Recognition, 2016, pp. 770--778.
+  in: Proceedings of the IEEE conference on computer vision and pattern
+  recognition, 2016, pp. 770--778.
 
 \bibitem{huang2017densely}
 G.~Huang, Z.~Liu, L.~Van Der~Maaten, K.~Q. Weinberger, Densely connected
-  convolutional networks, in: Proceedings of the IEEE Conference on Computer
-  Vision and Pattern Recognition, 2017, pp. 4700--4708.
+  convolutional networks, in: Proceedings of the IEEE conference on computer
+  vision and pattern recognition, 2017, pp. 4700--4708.
 
 \bibitem{tan2019efficientnet}
 M.~Tan, Q.~Le, Efficientnet: Rethinking model scaling for convolutional neural
-  networks, in: International Conference on Machine Learning, PMLR, 2019, pp.
+  networks, in: International conference on machine learning, PMLR, 2019, pp.
   6105--6114.
 
 \bibitem{sandler2018mobilenetv2}
 M.~Sandler, A.~Howard, M.~Zhu, A.~Zhmoginov, L.-C. Chen, Mobilenetv2: Inverted
-  residuals and linear bottlenecks, in: Proceedings of the IEEE Conference on
-  Computer Vision and Pattern Recognition, 2018, pp. 4510--4520.
+  residuals and linear bottlenecks, in: Proceedings of the IEEE conference on
+  computer vision and pattern recognition, 2018, pp. 4510--4520.
 
 \bibitem{brinker2019deep}
 T.~J. Brinker, A.~Hekler, A.~H. Enk, J.~Klode, A.~Hauschild, C.~Berking,
@@ -119,6 +157,20 @@ T.~J. Brinker, A.~Hekler, A.~H. Enk, J.~Klode, A.~Hauschild, C.~Berking,
   learning outperformed 136 of 157 dermatologists in a head-to-head dermoscopic
   melanoma image classification task, European journal of cancer 113 (2019)
   47--54.
+
+\bibitem{alayrac2022flamingo}
+J.-B. Alayrac, J.~Donahue, P.~Luc, A.~Miech, I.~Barr, Y.~Hasson, K.~Lenc,
+  A.~Mensch, K.~Millican, M.~Reynolds, et~al., Flamingo: a visual language
+  model for few-shot learning, Vol.~35, 2022, pp. 23716--23736.
+
+\bibitem{liu2023visual}
+H.~Liu, C.~Li, Q.~Wu, Y.~J. Lee, Visual instruction tuning, Advances in neural
+  information processing systems 36 (2023) 34892--34916.
+
+\bibitem{tu2024towards}
+T.~Tu, S.~Azizi, D.~Driess, M.~Schaekermann, M.~Amin, P.-C. Chang, A.~Carroll,
+  C.~Lau, R.~Tanno, I.~Ktena, et~al., Towards generalist biomedical ai, NEJM AI
+  1~(3) (2024) AIoa2300138.
 
 \bibitem{radford2021learning}
 A.~Radford, J.~W. Kim, C.~Hallacy, A.~Ramesh, G.~Goh, S.~Agarwal, G.~Sastry,
@@ -133,20 +185,21 @@ Z.~Wang, Z.~Wu, D.~Agarwal, J.~Sun, Medclip: Contrastive learning from unpaired
 
 \bibitem{zhang2023biomedclip}
 S.~Zhang, Y.~Xu, N.~Usuyama, H.~Xu, J.~Bagga, R.~Tinn, S.~Preston, R.~Rao,
-  M.~Wei, N.~Valluri, et~al., Biomedclip: A multimodal biomedical foundation
-  model pretrained from fifteen million scientific image-text pairs. arxiv
-  2023, arXiv preprint arXiv:2303.00915 70 (2023).
+  M.~Wei, N.~Valluri, et~al., Biomedclip: a multimodal biomedical foundation
+  model pretrained from fifteen million scientific image-text pairs, arXiv
+  preprint arXiv:2303.00915 (2023).
 
 \bibitem{li2023llavamed}
 C.~Li, C.~Wong, S.~Zhang, N.~Usuyama, H.~Liu, J.~Yang, T.~Naumann, H.~Poon,
   J.~Gao, Llava-med: Training a large language-and-vision assistant for
-  biomedicine in one day, arXiv preprint arXiv:2306.00890 (2023).
+  biomedicine in one day, Advances in Neural Information Processing Systems 36
+  (2023) 28541--28564.
 
 \bibitem{yan2025derm1m}
-S.~Yan, M.~Hu, Y.~Jiang, X.~Li, H.~Fei, P.~Tschandl, H.~Kittler, Z.~Ge, Derm1m:
-  A million-scale vision-language dataset aligned with clinical ontology
-  knowledge for dermatology, in: Proceedings of the IEEE/CVF International
-  Conference on Computer Vision, 2025, pp. 12681--12690.
+S.~Yan, M.~Hu, Y.~Jiang, X.~Li, H.~Fei, P.~Tschandl, H.~Kittler, Z.~Ge,
+  {Derm1M}: A million-scale vision-language dataset aligned with clinical
+  ontology knowledge for dermatology, in: Proceedings of the IEEE/CVF
+  International Conference on Computer Vision, 2025, pp. 12681--12690.
 
 \bibitem{yan2025multimodal}
 S.~Yan, Z.~Yu, C.~Primiero, C.~Vico-Alonso, Z.~Wang, L.~Yang, P.~Tschandl,
@@ -155,18 +208,33 @@ S.~Yan, Z.~Yu, C.~Primiero, C.~Vico-Alonso, Z.~Wang, L.~Yang, P.~Tschandl,
 
 \bibitem{hu2022lora}
 E.~J. Hu, Y.~Shen, P.~Wallis, Z.~Allen-Zhu, Y.~Li, S.~Wang, L.~Wang, W.~Chen,
-  et~al., Lora: Low-rank adaptation of large language models, ICLR 1~(2) (2022)
-  3.
+  et~al., {Lora}: Low-rank adaptation of large language models., Iclr 1~(2)
+  (2022) 3.
+
+\bibitem{houlsby2019parameter}
+N.~Houlsby, A.~Giurgiu, S.~Jastrzebski, B.~Morrone, Q.~De~Laroussilhe,
+  A.~Gesmundo, M.~Attariyan, S.~Gelly, Parameter-efficient transfer learning
+  for nlp, in: International conference on machine learning, PMLR, 2019, pp.
+  2790--2799.
+
+\bibitem{lester2021power}
+B.~Lester, R.~Al-Rfou, N.~Constant, The power of scale for parameter-efficient
+  prompt tuning, in: Proceedings of the 2021 conference on empirical methods in
+  natural language processing, 2021, pp. 3045--3059.
 
 \bibitem{woo2018cbam}
 S.~Woo, J.~Park, J.-Y. Lee, I.~S. Kweon, Cbam: Convolutional block attention
-  module, in: Proceedings of the European Conference on Computer Vision (ECCV),
+  module, in: Proceedings of the European conference on computer vision (ECCV),
   2018, pp. 3--19.
 
 \bibitem{lin2017focal}
 T.-Y. Lin, P.~Goyal, R.~Girshick, K.~He, P.~Doll{\'a}r, Focal loss for dense
-  object detection, in: Proceedings of the IEEE International Conference on
-  Computer Vision, 2017, pp. 2980--2988.
+  object detection, in: Proceedings of the IEEE international conference on
+  computer vision, 2017, pp. 2980--2988.
+
+\bibitem{hinton2015distilling}
+G.~Hinton, O.~Vinyals, J.~Dean, Distilling the knowledge in a neural network,
+  arXiv preprint arXiv:1503.02531 (2015).
 
 \bibitem{vo2026explainability}
 T.~L. Vo, T.~Nguyen, L.~M. Lopez-Ramos, H.~L. Hammer, M.~A. Riegler,
@@ -184,5 +252,11 @@ A.~El~Mir, E.~B. de~Sousa, I.~Mesina-Estarr{\'o}n, L.~A. Celi, M.~Hani,
   M.~Benjelloun, N.~Nageswaran, S.~Mahmoudi, S.~Siddiqui, S.~Sadasivam, et~al.,
   Moving beyond the empty cell: The threat of decontextualized healthcare data,
   PLOS Digital Health 5~(1) (2026) e0001194.
+
+\bibitem{selvaraju2017gradcam}
+R.~R. Selvaraju, M.~Cogswell, A.~Das, R.~Vedantam, D.~Parikh, D.~Batra,
+  Grad-cam: Visual explanations from deep networks via gradient-based
+  localization, in: Proceedings of the IEEE international conference on
+  computer vision, 2017, pp. 618--626.
 
 \end{thebibliography}
